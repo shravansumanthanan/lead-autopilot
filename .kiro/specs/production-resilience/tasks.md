@@ -51,7 +51,7 @@ This document breaks down the implementation of production-grade resilience and 
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7_
 
 
-- [ ] 11. Implement Metadata-Only Scraper - Create MetadataOnlyScraper class that extracts minimal metadata (domain info, social links, basic contact) when full scraping fails. Create backend/services/metadata_scraper.py. Write unit tests. (Priority: Medium, Effort: 2h)
+- [x] 11. Implement Metadata-Only Scraper - Create MetadataOnlyScraper class that extracts minimal metadata (domain info, social links, basic contact) when full scraping fails. Create backend/services/metadata_scraper.py. Write unit tests. (Priority: Medium, Effort: 2h)
 
 - [ ] 12. Create Resilient Scraper Service with Fallbacks - Create ResilientScraperService class with scrape_with_fallbacks() method implementing fallback hierarchy (Firecrawl → Basic → Playwright → Metadata), circuit breaker integration, retry logic, 30-second timeout, and warnings list. Create backend/services/resilient_scraper.py. Write integration tests. (Priority: High, Effort: 4h, Dependencies: Tasks 2, 3, 4, 10, 11)
 
@@ -122,4 +122,39 @@ This document breaks down the implementation of production-grade resilience and 
     - Test with malformed inputs
     - Files: `backend/services/input_validator.py` (new), `backend/requirements.txt` (add `email-validator` library)
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Foundation tasks (1.1-1.7) must be completed before other components
+- Resilient services (scraper, AI analysis, PDF generation) build on foundation components
+- Integration tasks wire resilient services into the main pipeline
+- Health monitoring and observability tasks can be implemented in parallel with core features
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    {
+      "id": 0,
+      "tasks": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "3.1"]
+    },
+    {
+      "id": 1,
+      "tasks": ["11", "14", "15", "16", "19", "20"]
+    },
+    {
+      "id": 2,
+      "tasks": ["12", "17"]
+    },
+    {
+      "id": 3,
+      "tasks": ["13", "18"]
+    }
+  ]
+}
+```
 
