@@ -1,0 +1,33 @@
+# Core
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+python-dotenv==1.1.0
+pydantic==2.11.3
+email-validator==2.3.0
+sqlalchemy==2.0.38
+celery==5.4.0
+redis==5.2.1
+
+# Data Enrichment
+httpx==0.28.1
+beautifulsoup4==4.13.4
+lxml==5.4.0
+
+# Enhanced Enrichment (optional — activate via env vars)
+firecrawl-py==4.26.1
+
+# AI (OpenRouter - OpenAI compatible)
+openai==1.82.0
+
+# PDF Generation
+weasyprint==63.1
+Jinja2==3.1.6
+
+# Email
+# (uses built-in smtplib + email modules)
+
+# Bonus: Google Integrations (optional)
+gspread==6.2.1
+google-api-python-client==2.172.0
+google-auth==2.40.3
+google-auth-oauthlib==1.2.1

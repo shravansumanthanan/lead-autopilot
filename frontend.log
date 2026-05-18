@@ -1,0 +1,31 @@
+
+> frontend@0.1.0 dev
+> next dev -p 5173
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:5173
+- Network:       http://127.0.2.2:5173
+✓ Ready in 329ms
+
+ GET / 200 in 2.6s (next.js: 2.5s, application-code: 117ms)
+✓ Compiled in 251ms
+ GET / 200 in 140ms (next.js: 74ms, application-code: 65ms)
+ GET / 200 in 35ms (next.js: 3ms, application-code: 32ms)
+ GET / 200 in 13ms (next.js: 3ms, application-code: 10ms)
+ GET / 200 in 112ms (next.js: 11ms, application-code: 101ms)
+ GET / 200 in 100ms (next.js: 45ms, application-code: 55ms)
+✓ Compiled in 102ms
+ GET / 200 in 61ms (next.js: 16ms, application-code: 44ms)
+[browser] Polling error: TypeError: Failed to fetch
+    at <unknown> (src/app/page.tsx:48:27)
+  46 |     pollingRef.current = setInterval(async () => {
+  47 |       try {
+> 48 |         const res = await fetch(`http://localhost:8000/api/leads/${id}/status`);
+     |                           ^
+  49 |         if (res.ok) {
+  50 |           const data = await res.json();
+  51 |           setCurrentBackendStep(data.current_step); (src/app/page.tsx:65:17)
+ GET / 200 in 92ms (next.js: 23ms, application-code: 69ms)
+ GET / 200 in 94ms (next.js: 33ms, application-code: 61ms)
+ GET / 200 in 91ms (next.js: 31ms, application-code: 59ms)
+[?25h

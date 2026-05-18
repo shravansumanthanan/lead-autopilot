@@ -1,0 +1,99 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0 -- /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot
+plugins: asyncio-1.3.0, anyio-4.13.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 63 items
+
+backend/services/test_confidence_assigner.py::test_assign_confidence_high PASSED [  1%]
+backend/services/test_confidence_assigner.py::test_assign_confidence_medium PASSED [  3%]
+backend/services/test_confidence_assigner.py::test_assign_confidence_low PASSED [  4%]
+backend/services/test_confidence_assigner.py::test_threshold_inclusive PASSED [  6%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_input_validation_error PASSED [  7%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_scraping_blocked_error PASSED [  9%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_scraping_timeout_error PASSED [ 11%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_ai_timeout_error PASSED [ 12%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_ai_invalid_response_error PASSED [ 14%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_pdf_rendering_error PASSED [ 15%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_email_smtp_error PASSED [ 17%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_rate_limit_error PASSED [ 19%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_api_unavailable_error PASSED [ 20%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_circuit_breaker_error PASSED [ 22%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_unknown_error PASSED [ 23%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_user_message_is_professional PASSED [ 25%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_all_categories_have_user_messages PASSED [ 26%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_user_messages_avoid_negative_language PASSED [ 28%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_all_categories_have_recovery_actions PASSED [ 30%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_recovery_actions_are_actionable PASSED [ 31%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_error_event_has_unique_id PASSED [ 33%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_error_event_includes_timestamp PASSED [ 34%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_error_event_tracks_retry_attempts PASSED [ 36%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_error_event_includes_technical_details PASSED [ 38%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_with_empty_error_message PASSED [ 39%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_categorize_with_none_additional_context PASSED [ 41%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_multiple_error_indicators_in_message PASSED [ 42%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_case_insensitive_error_matching PASSED [ 44%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_full_error_lifecycle PASSED [ 46%]
+backend/services/test_error_categorizer.py::TestErrorCategorizerService::test_error_event_serialization PASSED [ 47%]
+backend/services/test_quality_scorer.py::test_weights_sum_to_one PASSED  [ 49%]
+backend/services/test_quality_scorer.py::test_score_scraped_data_empty PASSED [ 50%]
+backend/services/test_quality_scorer.py::test_score_scraped_data_partial PASSED [ 52%]
+backend/services/test_quality_scorer.py::test_score_scraped_data_full PASSED [ 53%]
+backend/services/test_quality_scorer.py::test_score_ai_analysis_empty PASSED [ 55%]
+backend/services/test_quality_scorer.py::test_score_ai_analysis_partial PASSED [ 57%]
+backend/services/test_quality_scorer.py::test_score_ai_analysis_full PASSED [ 58%]
+backend/services/test_quality_scorer.py::test_score_web_search_empty PASSED [ 60%]
+backend/services/test_quality_scorer.py::test_score_web_search_full PASSED [ 61%]
+backend/services/test_quality_scorer.py::test_calculate_score_composite PASSED [ 63%]
+backend/services/test_quality_scorer.py::test_calculate_score_all_empty PASSED [ 65%]
+backend/test_features.py::test_rate_limiting PASSED                      [ 66%]
+backend/test_features.py::test_pipeline_and_db PASSED                    [ 68%]
+backend/utils/test_circuit_breaker.py::test_successful_call_remains_closed PASSED [ 69%]
+backend/utils/test_circuit_breaker.py::test_failure_increases_count PASSED [ 71%]
+backend/utils/test_circuit_breaker.py::test_trips_to_open PASSED         [ 73%]
+backend/utils/test_circuit_breaker.py::test_half_open_transition PASSED  [ 74%]
+backend/utils/test_circuit_breaker.py::test_half_open_failure_returns_to_open PASSED [ 76%]
+backend/utils/test_circuit_breaker.py::test_manual_force PASSED          [ 77%]
+backend/utils/test_circuit_breaker.py::test_registry PASSED              [ 79%]
+backend/utils/test_retry.py::test_retry_success_on_first_try PASSED      [ 80%]
+backend/utils/test_retry.py::test_retry_success_after_failures PASSED    [ 82%]
+backend/utils/test_retry.py::test_retry_max_retries_exceeded PASSED      [ 84%]
+backend/utils/test_retry.py::test_non_retryable_exception PASSED         [ 85%]
+backend/utils/test_retry.py::test_non_retryable_wrapper PASSED           [ 87%]
+backend/utils/test_retry.py::test_retry_after_header PASSED              [ 88%]
+backend/utils/test_retry.py::test_with_retry_decorator PASSED            [ 90%]
+backend/utils/test_timeout.py::test_execute_with_timeout_success PASSED  [ 92%]
+backend/utils/test_timeout.py::test_execute_with_timeout_fails PASSED    [ 93%]
+backend/utils/test_timeout.py::test_timeout_context_success PASSED       [ 95%]
+backend/utils/test_timeout.py::test_timeout_context_fails PASSED         [ 96%]
+backend/utils/test_timeout.py::test_with_timeout_decorator PASSED        [ 98%]
+backend/utils/test_timeout.py::test_env_var_override PASSED              [100%]
+
+=============================== warnings summary ===============================
+backend/models/errors.py:34
+backend/models/errors.py:34
+  /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot/backend/models/errors.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class ErrorEvent(BaseModel):
+
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_rate_limiting
+backend/test_features.py::test_pipeline_and_db
+  /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot/.venv/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/test_features.py::test_pipeline_and_db
+  /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot/backend/workflows/report_pipeline.py:166: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    enriched_at=datetime.utcnow(),
+
+backend/test_features.py::test_pipeline_and_db
+  /Users/sterlingsuman/.gemini/antigravity/scratch/lead-autopilot/backend/services/pdf_generator.py:56: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 63 passed, 12 warnings in 6.96s ========================

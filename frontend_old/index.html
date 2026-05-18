@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Autopilot — Automated Business Intelligence</title>
+    <meta name="description" content="Submit your company details and receive a personalized business intelligence report within minutes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <a href="/" class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">Lead Autopilot</span>
+            </a>
+            <div class="header-badge">Automated Intelligence</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Hero Section -->
+        <section class="hero" id="hero">
+            <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                AI-Powered Business Reports
+            </div>
+            <h1 class="hero-title">
+                Get Instant <span class="gradient-text">Business Intelligence</span>
+                <br>Delivered To Your Inbox
+            </h1>
+            <p class="hero-subtitle">
+                Submit your company details below and receive a personalized audit report 
+                with SWOT analysis, industry insights, and strategic recommendations — 
+                powered by AI and delivered in minutes.
+            </p>
+        </section>
+
+        <!-- Form Section -->
+        <section class="form-section" id="form-section">
+            <div class="form-card" id="form-card">
+                <div class="form-header">
+                    <h2 class="form-title">Start Your Analysis</h2>
+                    <p class="form-desc">Fill in your details and we'll generate your personalized report.</p>
+                </div>
+
+                <form id="lead-form" novalidate>
+                    <div class="form-grid">
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" id="name" name="name" class="form-input" placeholder="John Smith" required minlength="2" maxlength="100" autocomplete="name">
+                            <span class="form-error" id="name-error"></span>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="email" class="form-label">Business Email</label>
+                            <input type="email" id="email" name="email" class="form-input" placeholder="john@company.com" required autocomplete="email">
+                            <span class="form-error" id="email-error"></span>
+                        </div>
+
+                        <!-- Company Name -->
+                        <div class="form-group">
+                            <label for="company" class="form-label">Company Name</label>
+                            <input type="text" id="company" name="company" class="form-input" placeholder="Acme Corporation" required minlength="1" maxlength="200">
+                            <span class="form-error" id="company-error"></span>
+                        </div>
+
+                        <!-- Website URL -->
+                        <div class="form-group">
+                            <label for="website" class="form-label">Company Website</label>
+                            <input type="url" id="website" name="website" class="form-input" placeholder="https://acme.com" required>
+                            <span class="form-error" id="website-error"></span>
+                        </div>
+
+                        <!-- Industry -->
+                        <div class="form-group">
+                            <label for="industry" class="form-label">Industry</label>
+                            <select id="industry" name="industry" class="form-input form-select">
+                                <option value="General">Select your industry...</option>
+                                <option value="Technology / SaaS">Technology / SaaS</option>
+                                <option value="Finance / FinTech">Finance / FinTech</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="E-Commerce / Retail">E-Commerce / Retail</option>
+                                <option value="Consulting / Professional Services">Consulting / Professional Services</option>
+                                <option value="Education / EdTech">Education / EdTech</option>
+                                <option value="Real Estate">Real Estate</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Marketing / Advertising">Marketing / Advertising</option>
+                                <option value="Media / Entertainment">Media / Entertainment</option>
+                                <option value="Logistics / Supply Chain">Logistics / Supply Chain</option>
+                                <option value="Energy / CleanTech">Energy / CleanTech</option>
+                                <option value="Legal">Legal</option>
+                                <option value="Non-Profit">Non-Profit</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Company Size -->
+                        <div class="form-group">
+                            <label for="company_size" class="form-label">Company Size</label>
+                            <select id="company_size" name="company_size" class="form-input form-select">
+                                <option value="Unknown">Select size...</option>
+                                <option value="1-10">1–10 employees</option>
+                                <option value="11-50">11–50 employees</option>
+                                <option value="51-200">51–200 employees</option>
+                                <option value="201-500">201–500 employees</option>
+                                <option value="501-1000">501–1,000 employees</option>
+                                <option value="1000+">1,000+ employees</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Message -->
+                    <div class="form-group form-group-full">
+                        <label for="message" class="form-label">
+                            Pain Points / What You're Looking For
+                            <span class="form-optional">(optional)</span>
+                        </label>
+                        <textarea id="message" name="message" class="form-input form-textarea" placeholder="Tell us about your challenges, goals, or what you'd like insights on..." maxlength="2000" rows="3"></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submit-btn" class="submit-btn">
+                        <span class="submit-btn-text">Generate My Report</span>
+                        <span class="submit-btn-icon">→</span>
+                    </button>
+
+                    <p class="form-disclaimer">
+                        We use publicly available data from your website. Your information is handled securely.
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Processing Section (hidden by default) -->
+        <section class="processing-section hidden" id="processing-section">
+            <div class="processing-card">
+                <div class="processing-header">
+                    <div class="processing-spinner"></div>
+                    <h2 class="processing-title" id="processing-title">Processing Your Report</h2>
+                    <p class="processing-subtitle" id="processing-subtitle">This usually takes 30–60 seconds</p>
+                </div>
+
+                <div class="pipeline-steps" id="pipeline-steps">
+                    <div class="pipeline-step" data-step="submitted">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Lead Submitted</span>
+                            <span class="step-status">✓</span>
+                        </div>
+                    </div>
+                    <div class="pipeline-step" data-step="validating">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Validating Information</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                    <div class="pipeline-step" data-step="enriching">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Enriching Company Data</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                    <div class="pipeline-step" data-step="generating_pdf">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Generating PDF Report</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                    <div class="pipeline-step" data-step="sending_email">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Sending Email</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                    <div class="pipeline-step" data-step="complete">
+                        <div class="step-indicator">
+                            <div class="step-dot"></div>
+                        </div>
+                        <div class="step-content">
+                            <span class="step-label">Complete</span>
+                            <span class="step-status"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Success Section (hidden by default) -->
+        <section class="success-section hidden" id="success-section">
+            <div class="success-card">
+                <div class="success-icon">✓</div>
+                <h2 class="success-title">Report Delivered!</h2>
+                <p class="success-subtitle" id="success-message">
+                    Your personalized business intelligence report has been sent to your email.
+                </p>
+                <div class="success-actions">
+                    <a href="#" id="download-pdf-btn" class="btn-primary hidden">
+                        <span>📄</span> Download PDF
+                    </a>
+                    <button id="new-report-btn" class="btn-secondary" onclick="resetForm()">
+                        <span>+</span> Submit Another
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Section (hidden by default) -->
+        <section class="error-section hidden" id="error-section">
+            <div class="error-card">
+                <div class="error-icon">⚠</div>
+                <h2 class="error-title">Something Went Wrong</h2>
+                <p class="error-message" id="error-message">An unexpected error occurred. Please try again.</p>
+                <button class="btn-primary" onclick="resetForm()">Try Again</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Lead Autopilot — Automated Business Intelligence Reports</p>
+    </footer>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
