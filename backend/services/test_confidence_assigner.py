@@ -1,6 +1,6 @@
 import pytest
-from backend.models.quality import ConfidenceLevel, QualityScoreComponents
-from backend.services.confidence_assigner import ConfidenceLevelAssigner
+from models.quality import ConfidenceLevel, QualityScoreComponents
+from services.confidence_assigner import ConfidenceLevelAssigner
 
 def test_assign_confidence_high():
     assigner = ConfidenceLevelAssigner()

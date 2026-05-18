@@ -3,7 +3,7 @@ import asyncio
 import os
 from unittest.mock import AsyncMock, patch
 
-from backend.utils.timeout import TimeoutManager, with_timeout, timeout_manager
+from utils.timeout import TimeoutManager, with_timeout, timeout_manager
 
 @pytest.mark.asyncio
 async def test_execute_with_timeout_success():

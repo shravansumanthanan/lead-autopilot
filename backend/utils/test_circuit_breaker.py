@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from backend.utils.circuit_breaker import (
+from utils.circuit_breaker import (
     CircuitBreakerManager, 
     CircuitBreakerStateEnum, 
     CircuitBreakerOpenError,

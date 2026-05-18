@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
-from backend.utils.retry import RetryEngine, with_retry, NonRetryableError
+from utils.retry import RetryEngine, with_retry, NonRetryableError
 
 class DummyHTTPError(Exception):
     def __init__(self, message, retry_after=None):

@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 
 # ── Lead Submission (Form Input) ─────────────────────────────────────────────
@@ -68,14 +68,30 @@ class ActionItem(BaseModel):
 class AIAnalysis(BaseModel):
     """AI-generated analysis and insights."""
 
-    executive_summary: str = ""
-    current_state_assessment: str = ""
+    executive_summary: str = Field(default="", description="High-level summary of the company state")
+    current_state_assessment: str = Field(default="")
     swot: SWOTAnalysis = Field(default_factory=SWOTAnalysis)
     key_findings: list[dict] = Field(default_factory=list) # e.g. [{"category": "SEO", "observation": "..."}]
     risk_areas: list[str] = Field(default_factory=list)
     strategic_opportunities: list[str] = Field(default_factory=list)
     scorecard: Scorecard = Field(default_factory=Scorecard)
     action_roadmap: list[ActionItem] = Field(default_factory=list)
+
+    @field_validator("executive_summary", "current_state_assessment")
+    @classmethod
+    def validate_min_length(cls, v: str, info) -> str:
+        field_name = info.field_name
+        if v and len(v.strip()) < 50:
+            raise ValueError(f"{field_name} must be at least 50 characters for meaningful analysis.")
+        return v.strip() if v else v
+
+    @field_validator("action_roadmap", "strategic_opportunities", "risk_areas")
+    @classmethod
+    def validate_list_items(cls, v: list, info) -> list:
+        field_name = info.field_name
+        if v and len(v) < 2:
+            raise ValueError(f"If {field_name} is provided, it must contain at least 2 items to be comprehensive.")
+        return v
 
 
 class EnrichedCompanyData(BaseModel):
@@ -88,6 +104,8 @@ class EnrichedCompanyData(BaseModel):
     data_quality_score: float = Field(default=0.0, ge=0.0, le=1.0, description="0.0-1.0 quality rating")
     confidence_level: str = Field(default="Low")
     confidence_reason: str = Field(default="Limited data available.")
+    errors: list[str] = Field(default_factory=list, description="Hard errors encountered during enrichment")
+    warnings: list[str] = Field(default_factory=list, description="Soft warnings and fallback triggers")
 
 
 # ── Pipeline Status ──────────────────────────────────────────────────────────

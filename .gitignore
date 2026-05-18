@@ -39,3 +39,8 @@ Thumbs.db
 credentials.json
 service_account.json
 token.json
+
+# SQLite databases (transient state, never commit)
+*.db
+*.sqlite
+*.sqlite3

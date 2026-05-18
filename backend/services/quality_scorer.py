@@ -1,5 +1,5 @@
 import logging
-from backend.models.quality import QualityScoreComponents
+from models.quality import QualityScoreComponents
 
 logger = logging.getLogger(__name__)
 

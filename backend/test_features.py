@@ -9,7 +9,10 @@ from sqlalchemy.orm import sessionmaker
 os.environ["CELERY_TASK_ALWAYS_EAGER"] = "True"
 
 from main import app
-from database import DBLeadStatus, Base, get_db
+from database import DBLeadStatus, Base, get_db, init_db
+
+# Initialize the main database tables (needed because tasks.py uses SessionLocal directly)
+init_db()
 
 # Create a test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"

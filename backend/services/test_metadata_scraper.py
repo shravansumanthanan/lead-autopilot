@@ -2,7 +2,7 @@ import pytest
 import httpx
 from unittest.mock import patch, MagicMock
 
-from backend.services.metadata_scraper import MetadataOnlyScraper
+from services.metadata_scraper import MetadataOnlyScraper
 
 @pytest.mark.asyncio
 async def test_metadata_scraper_success():

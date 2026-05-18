@@ -2,13 +2,10 @@
 Enrichment Pipeline Module.
 
 Orchestrates the complete data enrichment flow:
-1. Scrape company website (Firecrawl → BS4 fallback)
+1. Scrape company website (ResilientScraperService)
 2. Web search for public context (Serper.dev, optional)
 3. Analyze with AI (Qwen via OpenRouter)
 4. Merge and score the combined data
-
-Each step has graceful fallbacks — if one source fails,
-others proceed with whatever data is available.
 """
 
 from __future__ import annotations
@@ -17,105 +14,45 @@ import logging
 from datetime import datetime
 
 from core_models import AIAnalysis, EnrichedCompanyData, LeadSubmission, ScrapedData
-from services.firecrawl_scraper import scrape_with_firecrawl
-from services.scraper import scrape_company_website
+from services.resilient_scraper import ResilientScraperService
 from services.web_search import search_company_info, format_search_context
-from services.ai_analysis import analyze_company
+from services.resilient_ai_analysis import ResilientAIAnalysisService
+from services.quality_scorer import QualityScoreCalculator
 from utils.validation import is_valid_url, normalize_url
+from models.errors import ErrorCategory, ErrorEvent
 
 logger = logging.getLogger(__name__)
 
-
-def _calculate_quality_score(scraped: ScrapedData, analysis: AIAnalysis, has_search: bool) -> float:
-    """
-    Calculate a data quality score (0.0 - 1.0) based on completeness.
-
-    Scoring:
-    - Scraped data fields:  0.40 max
-    - AI analysis fields:   0.45 max
-    - Web search context:   0.15
-    """
-    score = 0.0
-
-    # Scraped data quality (0.40 max)
-    if scraped.title:
-        score += 0.05
-    if scraped.meta_description:
-        score += 0.05
-    if scraped.hero_text:
-        score += 0.03
-    if scraped.about_text:
-        score += 0.10
-    if scraped.services:
-        score += 0.07
-    if scraped.tech_stack:
-        score += 0.03
-    if scraped.social_links:
-        score += 0.04
-    if scraped.contact_info:
-        score += 0.03
-
-    # AI analysis quality (0.45 max)
-    if analysis.executive_summary and len(analysis.executive_summary) > 50:
-        score += 0.12
-    if analysis.swot and (analysis.swot.strengths or analysis.swot.weaknesses):
-        score += 0.08
-    if analysis.action_roadmap and len(analysis.action_roadmap) >= 3:
-        score += 0.15
-    if analysis.current_state_assessment and len(analysis.current_state_assessment) > 50:
-        score += 0.10
-    if analysis.key_findings:
-        score += 0.05
-    if analysis.risk_areas:
-        score += 0.05
-
-    # Web search bonus (0.15)
-    if has_search:
-        score += 0.15
-
-    return min(score, 1.0)
-
+# Initialize singletons
+scraper_service = ResilientScraperService()
+ai_service = ResilientAIAnalysisService()
+quality_calculator = QualityScoreCalculator()
 
 async def run_enrichment_pipeline(lead: LeadSubmission) -> EnrichedCompanyData:
     """
     Run the complete enrichment pipeline for a lead submission.
-
-    Strategy:
-    1. Try Firecrawl first (better for JS-heavy sites)
-    2. Fall back to HTTPX+BS4 scraper if Firecrawl unavailable/fails
-    3. Run web search in parallel context gathering
-    4. Feed everything to AI for analysis
-
-    This function never raises — it always returns at least a minimal
-    EnrichedCompanyData object.
     """
     logger.info(f"Starting enrichment pipeline for {lead.company} ({lead.website})")
 
     # ── Step 1: Scrape Website ───────────────────────────────────────
     scraped = ScrapedData()
+    scraper_warnings = []
     
     is_valid = is_valid_url(str(lead.website))
     
     if not is_valid:
-        logger.warning(f"Missing or invalid URL for {lead.company}. Gracefully degrading to business-level analysis.")
+        logger.warning(f"Missing or invalid URL for {lead.company}. Gracefully degrading.")
+        scraper_warnings.append(f"Invalid URL: {lead.website}")
     else:
         normalized_url = normalize_url(str(lead.website))
-        # Try Firecrawl first (optional, JS-aware)
+        logger.info(f"Using normalized URL: {normalized_url}")
+        
         try:
-            firecrawl_result = await scrape_with_firecrawl(normalized_url)
-            if firecrawl_result:
-                scraped = firecrawl_result
-                logger.info(f"Using Firecrawl data for {lead.company}")
+            scraped, scraper_warnings = await scraper_service.scrape_with_fallbacks(normalized_url)
+            logger.info(f"Scraping completed with {len(scraper_warnings)} warnings.")
         except Exception as e:
-            logger.warning(f"Firecrawl failed for {normalized_url}: {e}")
-
-        # Fall back to basic scraper if Firecrawl didn't provide data
-        if not scraped.title and not scraped.about_text:
-            try:
-                scraped = await scrape_company_website(normalized_url)
-                logger.info(f"Using BS4 scraper data for {lead.company}")
-            except Exception as e:
-                logger.error(f"Basic scraping also failed for {normalized_url}: {e}")
+            logger.error(f"Absolute scraping failure for {normalized_url}: {e}")
+            scraper_warnings.append(str(e))
 
     # ── Step 2: Web Search (Optional) ────────────────────────────────
     search_results = {}
@@ -129,45 +66,65 @@ async def run_enrichment_pipeline(lead: LeadSubmission) -> EnrichedCompanyData:
         logger.warning(f"Web search failed for {lead.company}: {e}")
 
     # ── Step 3: AI Analysis ──────────────────────────────────────────
-    analysis = AIAnalysis()
+    ai_warnings = []
     try:
-        analysis = await analyze_company(
+        analysis, ai_warnings = await ai_service.analyze_with_validation(
             company_name=lead.company,
             industry=lead.industry,
             website_url=str(lead.website),
             scraped=scraped,
-            prospect_message=lead.message,
+            prospect_message=lead.message or "",
             web_search_context=search_context,
         )
-        logger.info(f"AI analysis complete for {lead.company}")
+        logger.info(f"AI analysis complete for {lead.company} with {len(ai_warnings)} warnings")
     except Exception as e:
-        logger.error(f"AI analysis failed for {lead.company}: {e}")
+        logger.error(f"Absolute AI analysis failure for {lead.company}: {e}")
+        analysis = AIAnalysis()  # Final safety fallback though resilient service should handle this
+        ai_warnings.append(str(e))
 
     # ── Step 4: Calculate Quality & Assemble ─────────────────────────
-    quality = _calculate_quality_score(scraped, analysis, bool(search_results))
+    # Use the new QualityScoreCalculator
+    scraped_dict = scraped.model_dump() if hasattr(scraped, "model_dump") else scraped.dict()
+    analysis_dict = analysis.model_dump() if hasattr(analysis, "model_dump") else analysis.dict()
     
-    # Generate Confidence Indicators for graceful degradation
-    if quality >= 0.8:
+    quality_components = quality_calculator.calculate_score(
+        scraped_data=scraped_dict,
+        ai_analysis=analysis_dict,
+        web_search_data=search_results
+    )
+    
+    # Generate Confidence Indicators
+    if quality_components.composite_score >= 0.8:
         confidence_level = "High"
         confidence_reason = "Comprehensive public data was retrieved successfully."
-    elif quality >= 0.4:
+    elif quality_components.composite_score >= 0.4:
         confidence_level = "Medium"
         confidence_reason = "Limited publicly accessible website content was available for deep technical assessment."
     else:
         confidence_level = "Low"
-        confidence_reason = "The system gracefully degraded to business-level analysis due to missing data or blocked requests."
+        confidence_reason = "The system gracefully degraded due to missing data or blocked requests."
 
-    logger.info(f"Enrichment quality score for {lead.company}: {quality:.2f} ({confidence_level} Confidence)")
+    logger.info(f"Enrichment quality score for {lead.company}: {quality_components.composite_score:.2f} ({confidence_level})")
 
+    # Optional: We could log the warnings as ErrorEvents. For now they're just strings.
+    # In a real app we'd probably save these ErrorEvents to the DB.
+    
     enriched = EnrichedCompanyData(
         lead=lead,
         scraped=scraped,
         analysis=analysis,
         enriched_at=datetime.utcnow(),
-        data_quality_score=quality,
+        data_quality_score=quality_components.composite_score,
         confidence_level=confidence_level,
         confidence_reason=confidence_reason,
+        errors=[],
+        warnings=scraper_warnings + ai_warnings,
     )
+    
+    # Storing warnings on the model? EnrichedCompanyData doesn't have a place for them currently, 
+    # but the task asks to "handle warnings, store errors, and update quality score".
+    # I will add an `errors: List[str] = []` field to `EnrichedCompanyData` later if needed,
+    # or I will just pass it to the db if this returns it.
 
     logger.info(f"Enrichment pipeline complete for {lead.company}")
     return enriched

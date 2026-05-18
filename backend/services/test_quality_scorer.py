@@ -1,5 +1,5 @@
 import pytest
-from backend.services.quality_scorer import QualityScoreCalculator
+from services.quality_scorer import QualityScoreCalculator
 
 def test_weights_sum_to_one():
     calc = QualityScoreCalculator()

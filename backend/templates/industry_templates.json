@@ -1,0 +1,74 @@
+{
+  "technology": {
+    "strengths": ["Innovation capability", "Scalable solutions"],
+    "weaknesses": ["Rapidly changing tech landscape", "High competition"],
+    "opportunities": ["AI integration", "Cloud transitions"],
+    "threats": ["Cybersecurity risks", "Market saturation"],
+    "action_roadmap": [
+      {"recommendation": "Optimize Cloud Architecture", "timeline": "Review and migrate remaining legacy systems to cloud-native platforms to boost performance.", "priority": "High"},
+      {"recommendation": "Implement AI-driven Automation", "timeline": "Identify repetitive workflows that can be automated using machine learning models.", "priority": "Medium"}
+    ],
+    "strategic_opportunities": ["SaaS expansion", "API monetization"],
+    "risk_areas": ["Talent retention in competitive market", "Tech debt accumulation"]
+  },
+  "healthcare": {
+    "strengths": ["Essential service provider", "Regulatory expertise"],
+    "weaknesses": ["High operational costs", "Compliance burdens"],
+    "opportunities": ["Telehealth expansion", "Personalized medicine"],
+    "threats": ["Regulatory changes", "Data privacy breaches"],
+    "action_roadmap": [
+      {"recommendation": "Enhance Telehealth Capabilities", "timeline": "Expand virtual care offerings to improve patient accessibility and reduce facility load.", "priority": "High"},
+      {"recommendation": "Audit HIPAA Compliance", "timeline": "Conduct a comprehensive review of all digital patient interaction systems.", "priority": "High"}
+    ],
+    "strategic_opportunities": ["Patient portal upgrades", "Wearable data integrations"],
+    "risk_areas": ["Data security", "Staff burnout"]
+  },
+  "finance": {
+    "strengths": ["Strong capital base", "Established trust"],
+    "weaknesses": ["Legacy IT systems", "High regulatory scrutiny"],
+    "opportunities": ["Fintech partnerships", "Digital-first banking"],
+    "threats": ["Economic downturns", "Disruptive startups"],
+    "action_roadmap": [
+      {"recommendation": "Modernize Digital Banking", "timeline": "Revamp mobile interfaces and simplify digital onboarding processes.", "priority": "High"},
+      {"recommendation": "Enhance Fraud Detection", "timeline": "Deploy advanced analytics to monitor transactions in real-time.", "priority": "High"}
+    ],
+    "strategic_opportunities": ["DeFi integrations", "Automated wealth management"],
+    "risk_areas": ["Market volatility", "Regulatory compliance penalties"]
+  },
+  "retail": {
+    "strengths": ["Established brand presence", "Supply chain network"],
+    "weaknesses": ["Thin profit margins", "Inventory management complexities"],
+    "opportunities": ["Omnichannel expansion", "Personalized marketing"],
+    "threats": ["Supply chain disruptions", "E-commerce giants"],
+    "action_roadmap": [
+      {"recommendation": "Unify Omnichannel Experience", "timeline": "Ensure seamless transition between online shopping and in-store pickup.", "priority": "High"},
+      {"recommendation": "Optimize Inventory Automation", "timeline": "Use predictive analytics to manage stock levels and reduce holding costs.", "priority": "Medium"}
+    ],
+    "strategic_opportunities": ["Direct-to-consumer models", "Social commerce"],
+    "risk_areas": ["Consumer spending shifts", "Logistics bottlenecks"]
+  },
+  "real estate": {
+    "strengths": ["Tangible asset backing", "Local market expertise"],
+    "weaknesses": ["Market cyclicality", "High capital requirements"],
+    "opportunities": ["Proptech adoption", "Sustainable building practices"],
+    "threats": ["Interest rate hikes", "Urban shifts"],
+    "action_roadmap": [
+      {"recommendation": "Digitize Property Viewings", "timeline": "Implement 3D and VR tours for all major listings to expand buyer reach.", "priority": "High"},
+      {"recommendation": "Adopt Smart CRM", "timeline": "Integrate real estate-specific CRM tools to better track client long-term engagement.", "priority": "Medium"}
+    ],
+    "strategic_opportunities": ["Green building certifications", "Fractional ownership models"],
+    "risk_areas": ["Mortgage rate fluctuations", "Regulatory rezoning"]
+  },
+  "default": {
+    "strengths": ["Established operations", "Core service delivery"],
+    "weaknesses": ["Scalability bottlenecks", "Process inefficiencies"],
+    "opportunities": ["Digital transformation", "Market expansion"],
+    "threats": ["New entrants", "Economic shifts"],
+    "action_roadmap": [
+      {"recommendation": "Conduct Digital Assessment", "timeline": "Review current technology stack to identify modernization opportunities.", "priority": "High"},
+      {"recommendation": "Optimize Core Operations", "timeline": "Map existing workflows to eliminate bottlenecks and reduce overhead.", "priority": "Medium"}
+    ],
+    "strategic_opportunities": ["Service diversification", "Partnership development"],
+    "risk_areas": ["Competitive displacement", "Operational scaling"]
+  }
+}

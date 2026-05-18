@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
 
-from backend.database import DBLeadStatus
+from database import DBLeadStatus
 
 class InputValidationResult:
     def __init__(self, is_valid: bool, normalized_data: Dict[str, Any], warnings: List[str]):

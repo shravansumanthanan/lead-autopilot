@@ -1,4 +1,4 @@
-from backend.models.quality import ConfidenceLevel, ConfidenceMetadata, QualityScoreComponents
+from models.quality import ConfidenceLevel, ConfidenceMetadata, QualityScoreComponents
 
 class ConfidenceLevelAssigner:
     """Assigns a confidence level based on quality score and identifies data gaps."""
