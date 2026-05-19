@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from celery_app import celery_app
 
 from core_models import LeadSubmission, EnrichedCompanyData, PipelineStep
@@ -90,7 +90,7 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
         asyncio.create_task(send_slack_notification(enriched, pdf_url=drive_link))
         asyncio.create_task(send_crm_webhook(enriched, pdf_url=drive_link))
 
-        update_db_status(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.utcnow())
+        update_db_status(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.now(timezone.utc))
         
         if enriched.confidence_level != "High":
             logger.info(f"[{lead_id}] Pipeline complete for {lead.company} (PARTIAL_SUCCESS: {enriched.confidence_level} Confidence)")

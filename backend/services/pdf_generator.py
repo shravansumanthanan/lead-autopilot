@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -53,7 +53,7 @@ def generate_report_pdf(enriched: EnrichedCompanyData) -> str:
         c if c.isalnum() or c in ("-", "_") else "_"
         for c in enriched.lead.company
     ).strip("_")[:50]
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename = f"{safe_name}_{timestamp}.pdf"
     pdf_path = output_dir / filename
 
@@ -93,7 +93,7 @@ def generate_report_pdf(enriched: EnrichedCompanyData) -> str:
         "industry": enriched.lead.industry,
         "website": enriched.lead.website,
         "company_size": enriched.lead.company_size,
-        "report_date": datetime.utcnow().strftime("%B %d, %Y"),
+        "report_date": datetime.now(timezone.utc).strftime("%B %d, %Y"),
         "quality_score": enriched.data_quality_score,
         "scraped": enriched.scraped,
         "analysis": enriched.analysis,

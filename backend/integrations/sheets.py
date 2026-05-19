@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ async def log_lead_to_sheets(
             logger.info(f"Created new Google Sheet: {sheet_name}")
 
         worksheet = spreadsheet.sheet1
-        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         worksheet.append_row([
             name, email, company, website,
