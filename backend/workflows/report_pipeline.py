@@ -11,7 +11,7 @@ Orchestrates the complete data enrichment flow:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core_models import AIAnalysis, EnrichedCompanyData, LeadSubmission, ScrapedData
 from services.resilient_scraper import ResilientScraperService
@@ -113,7 +113,7 @@ async def run_enrichment_pipeline(lead: LeadSubmission) -> EnrichedCompanyData:
         lead=lead,
         scraped=scraped,
         analysis=analysis,
-        enriched_at=datetime.utcnow(),
+        enriched_at=datetime.now(timezone.utc),
         data_quality_score=quality_components.composite_score,
         confidence_level=confidence_level,
         confidence_reason=confidence_reason,

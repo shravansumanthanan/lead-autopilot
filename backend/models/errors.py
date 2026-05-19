@@ -46,8 +46,8 @@ class ErrorEvent(BaseModel):
     recovery_action: Optional[str] = Field(default=None, description="Suggested recovery action")
     user_facing_message: str = Field(default="", description="Professional message for end users")
     
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "error_id": "a1b2c3d4",
                 "lead_id": "lead_123456",
@@ -61,4 +61,5 @@ class ErrorEvent(BaseModel):
                 "recovery_action": "Fallback to basic scraper",
                 "user_facing_message": "We encountered difficulty accessing the website. Using alternative data collection method."
             }
+        }
         }

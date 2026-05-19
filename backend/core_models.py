@@ -7,7 +7,7 @@ pipeline status tracking, and API responses.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -100,7 +100,7 @@ class EnrichedCompanyData(BaseModel):
     lead: LeadSubmission
     scraped: ScrapedData = Field(default_factory=ScrapedData)
     analysis: AIAnalysis = Field(default_factory=AIAnalysis)
-    enriched_at: datetime = Field(default_factory=datetime.utcnow)
+    enriched_at: datetime = Field(default_factory=datetime.now(timezone.utc))
     data_quality_score: float = Field(default=0.0, ge=0.0, le=1.0, description="0.0-1.0 quality rating")
     confidence_level: str = Field(default="Low")
     confidence_reason: str = Field(default="Limited data available.")
@@ -132,7 +132,7 @@ class LeadStatus(BaseModel):
     error_message: Optional[str] = None
     pdf_path: Optional[str] = None
     email_sent: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     quality_score: dict = Field(default_factory=dict)
     confidence_level: Optional[str] = None

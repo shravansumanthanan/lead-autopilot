@@ -45,7 +45,7 @@ export default function Home() {
     
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/leads/${id}/status`);
+        const res = await fetch(`/api/leads/${id}/status`);
         if (res.ok) {
           const data = await res.json();
           setCurrentBackendStep(data.current_step);
@@ -89,7 +89,7 @@ export default function Home() {
     setErrorMessage(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/leads", {
+      const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalFormData),
@@ -111,7 +111,7 @@ export default function Home() {
 
   const handleDownload = () => {
     if (leadId) {
-      window.open(`http://localhost:8000/api/leads/${leadId}/pdf`, "_blank");
+      window.open(`/api/leads/${leadId}/pdf`, "_blank");
     }
   };
 
