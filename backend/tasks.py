@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from celery_app import celery_app
 
 from core_models import LeadSubmission, EnrichedCompanyData, PipelineStep
@@ -8,10 +8,13 @@ from database import SessionLocal, DBLeadStatus
 from workflows.report_pipeline import run_enrichment_pipeline
 from services.pdf_generator import generate_report_pdf
 from services.email_service import send_report_email
+from services.error_categorizer import ErrorCategorizerService
 from integrations.sheets import log_lead_to_sheets
 from integrations.drive import upload_pdf_to_drive
+from integrations.webhooks import send_slack_notification, send_crm_webhook
 
 logger = logging.getLogger(__name__)
+error_categorizer = ErrorCategorizerService()
 
 def update_db_status(db, lead_id: str, current_step: PipelineStep, completed_step: PipelineStep | None = None, **kwargs):
     status = db.query(DBLeadStatus).filter(DBLeadStatus.lead_id == lead_id).first()
@@ -75,22 +78,26 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
         except Exception as e:
             logger.warning(f"[{lead_id}] Sheets logging failed: {e}")
 
+        # ── Step 6: Webhooks (CRM/Slack) ───────────────────────────────
+        drive_link: str | None = None
         try:
             drive_link = await upload_pdf_to_drive(pdf_path, lead.company)
             if drive_link:
                 logger.info(f"[{lead_id}] PDF archived to Drive: {drive_link}")
         except Exception as e:
             logger.warning(f"[{lead_id}] Drive upload failed: {e}")
-            drive_link = None
 
-        # ── Step 6: Webhooks (CRM/Slack) ─────────────────────────────
-        from integrations.webhooks import send_slack_notification, send_crm_webhook
-        
-        # Fire and forget webhooks
-        asyncio.create_task(send_slack_notification(enriched, pdf_url=drive_link))
-        asyncio.create_task(send_crm_webhook(enriched, pdf_url=drive_link))
+        try:
+            await send_slack_notification(enriched, pdf_url=drive_link)
+        except Exception as e:
+            logger.warning(f"[{lead_id}] Slack notification failed: {e}")
 
-        update_db_status(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.utcnow())
+        try:
+            await send_crm_webhook(enriched, pdf_url=drive_link)
+        except Exception as e:
+            logger.warning(f"[{lead_id}] CRM webhook failed: {e}")
+
+        update_db_status(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.now(timezone.utc))
         
         if enriched.confidence_level != "High":
             logger.info(f"[{lead_id}] Pipeline complete for {lead.company} (PARTIAL_SUCCESS: {enriched.confidence_level} Confidence)")
@@ -98,8 +105,15 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
             logger.info(f"[{lead_id}] Pipeline complete for {lead.company}")
 
     except Exception as e:
-        logger.error(f"[{lead_id}] Pipeline error: {e}", exc_info=True)
-        update_db_status(db, lead_id, PipelineStep.ERROR, error_message=str(e))
+        error_event = error_categorizer.categorize_and_log(
+            error=e,
+            lead_id=lead_id,
+            component="pipeline",
+        )
+        update_db_status(
+            db, lead_id, PipelineStep.ERROR,
+            error_message=error_event.user_facing_message,
+        )
     finally:
         db.close()
 

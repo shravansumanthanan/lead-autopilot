@@ -10,11 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-# Handle imports for both direct execution and module import
-try:
-    from models.errors import ErrorCategory, ErrorEvent
-except ImportError:
-    from models.errors import ErrorCategory, ErrorEvent
+from core_models import ErrorCategory, ErrorEvent
 
 
 logger = logging.getLogger("lead-autopilot.errors")

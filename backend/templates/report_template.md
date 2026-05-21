@@ -30,6 +30,6 @@ $risk_areas
 $strategic_opportunities
 
 ## Action Roadmap
-| Recommendation | Timeline | Description | Priority | Effort | Impact |
-| --- | --- | --- | --- | --- | --- |
+| Recommendation | Timeline | Effort | Impact |
+| --- | --- | --- | --- |
 $action_roadmap

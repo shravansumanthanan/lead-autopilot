@@ -45,7 +45,8 @@ export default function Home() {
     
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/leads/${id}/status`);
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${API_BASE}/api/leads/${id}/status`);
         if (res.ok) {
           const data = await res.json();
           setCurrentBackendStep(data.current_step);
@@ -89,7 +90,8 @@ export default function Home() {
     setErrorMessage(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/leads", {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_BASE}/api/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalFormData),

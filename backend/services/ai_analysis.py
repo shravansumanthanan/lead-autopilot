@@ -248,6 +248,11 @@ async def analyze_company(
     """
     Generate AI-powered company analysis using OpenRouter (Qwen).
 
+    .. deprecated::
+        Use ``ResilientAIAnalysisService.analyze()`` from
+        ``services.resilient_ai_analysis`` instead. It wraps the same
+        helpers with circuit breakers, retries, and fallback generation.
+
     Args:
         company_name: Name of the company.
         industry: Industry/sector.

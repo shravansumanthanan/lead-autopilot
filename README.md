@@ -1,169 +1,155 @@
 # Lead Autopilot
 
-> Automated lead intake → company enrichment → PDF report generation → email delivery.
-
-When a prospect submits a form, the system automatically:
-
-1. **Captures & validates** lead information (Pydantic)
-2. **Enriches** company data — Firecrawl (optional, JS-aware) → HTTPX+BS4 scraper → Serper.dev web search (optional)
-3. **Generates** a personalized 6-page PDF audit report (WeasyPrint + Jinja2)
-4. **Sends** the report to the prospect via email (Gmail SMTP)
-5. *(Bonus)* Logs to Google Sheets + archives PDF to Google Drive
+An end-to-end automated lead intelligence platform. When a prospect submits a form, the system autonomously scrapes their company website, runs AI-powered analysis, generates a personalized PDF report, and emails it — all without human intervention.
 
 ---
 
-## Architecture
+## System Architecture
 
 ```
-┌────────────────────┐      POST /api/leads
-│  Vite Frontend     │ ──────────────────────► ┌──────────────────────────────────┐
-│  (Lead Form)       │ ◄──────────────────────  │  FastAPI Backend                 │
-│                    │      202 + lead_id        │                                  │
-│  GET /status poll  │ ──────────────────────►  │  Background Pipeline:            │
-└────────────────────┘                          │  ┌──────────┐  ┌──────────────┐ │
-                                                │  │Firecrawl │→ │  BS4 Scraper │ │
-                                                │  └──────────┘  └──────────────┘ │
-                                                │        ↓                         │
-                                                │  ┌──────────┐                   │
-                                                │  │ Serper.dev│ (web search)      │
-                                                │  └──────────┘                   │
-                                                │        ↓                         │
-                                                │  ┌──────────┐                   │
-                                                │  │Qwen (via │ (AI analysis)      │
-                                                │  │OpenRouter│                   │
-                                                │  └──────────┘                   │
-                                                │        ↓                         │
-                                                │  ┌──────────┐  ┌──────────────┐ │
-                                                │  │WeasyPrint│  │ Gmail SMTP   │ │
-                                                │  │  PDF Gen │  │ Email Send   │ │
-                                                │  └──────────┘  └──────────────┘ │
-                                                └──────────────────────────────────┘
+Prospect submits form
+        │
+        ▼
+┌─────────────────┐     HTTP POST      ┌──────────────────────┐
+│   Next.js UI    │ ─────────────────► │  FastAPI Backend      │
+│  (port 5173)    │                    │  (port 8000)          │
+└─────────────────┘                    └──────────┬───────────┘
+                                                  │ enqueues task
+                                                  ▼
+                                       ┌──────────────────────┐
+                                       │   Celery Worker      │
+                                       │   (Redis broker)     │
+                                       └──────────┬───────────┘
+                                                  │
+                          ┌───────────────────────┼────────────────────────┐
+                          ▼                       ▼                        ▼
+                 ┌────────────────┐   ┌──────────────────┐   ┌────────────────────┐
+                 │  Web Scraper   │   │  OpenRouter AI   │   │  PDF Generator     │
+                 │  (httpx + BS4) │   │  (Qwen model)    │   │  (Jinja2+WeasyPrint│
+                 └────────────────┘   └──────────────────┘   └────────────────────┘
+                          │                       │                        │
+                          └───────────────────────┼────────────────────────┘
+                                                  ▼
+                                       ┌──────────────────────┐
+                                       │  Email + Bonus       │
+                                       │  Google Sheets/Drive │
+                                       └──────────────────────┘
 ```
 
-## Tech Stack
+### Pipeline Steps
 
-| Layer | Technology |
-|:--|:--|
-| Frontend | Vite + Vanilla JS/CSS (dark glassmorphism design) |
-| Backend | Python 3.13 + FastAPI |
-| Scraping (primary) | Firecrawl API (JS-aware, optional) |
-| Scraping (fallback) | HTTPX + BeautifulSoup4 |
-| Web Search | Serper.dev Google Search API (optional) |
-| AI Analysis | Qwen via OpenRouter (OpenAI-compatible SDK) |
-| PDF Generation | WeasyPrint + Jinja2 |
-| Email | Gmail SMTP (smtplib) |
-| Sheets (bonus) | gspread |
-| Drive (bonus) | google-api-python-client |
+| Step | Description |
+|------|-------------|
+| **1. Validate** | Pydantic validates and sanitises all form inputs |
+| **2. Scrape** | Multi-tier scraper: Firecrawl → httpx/BeautifulSoup → Metadata fallback |
+| **3. Enrich** | Optional Serper.dev Google search adds public context |
+| **4. Analyse** | OpenRouter Qwen AI generates SWOT, scorecard, roadmap, and key findings |
+| **5. Generate PDF** | Jinja2 HTML template rendered to a multi-page PDF by WeasyPrint |
+| **6. Email** | PDF attached to a branded HTML email sent via Gmail SMTP |
+| **7. Log** | Lead logged to Google Sheets (optional) and PDF archived to Google Drive (optional) |
+
+### Resilience Design
+
+- **Circuit breaker** on AI and scraping calls — prevents cascading failures
+- **Retry with exponential backoff** on transient network errors
+- **Timeout guards** (30s scraping, 45s AI) — no hung workers
+- **Graceful degradation**: if Firecrawl fails → basic scraper; if AI fails → industry template fallback
+- **Quality scoring** (0.0–1.0) and confidence levels (High / Medium / Low) reported per-lead
 
 ---
 
 ## Quick Start
 
-### Option A — One Command
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- Redis (installed via `brew install redis` or Docker)
+- An [OpenRouter](https://openrouter.ai) API key
+- A Gmail account with an [App Password](https://myaccount.google.com/apppasswords)
+
+### 1. Clone and configure
 
 ```bash
-./setup.sh
+git clone <repo-url>
+cd lead-autopilot
+
+cp backend/.env.example backend/.env
+# Edit backend/.env — at minimum set OPENROUTER_API_KEY, SMTP_EMAIL, SMTP_PASSWORD
 ```
 
-Then edit `backend/.env` and start both servers as prompted.
+### 2. Set up the Python environment
 
-### Option B — Manual
-
-**Prerequisites (macOS):**
-```bash
-# WeasyPrint system libraries
-brew install pango cairo libffi gdk-pixbuf
-
-# Python 3.11+ and Node 18+
-brew install python@3.13 node
-```
-
-**Backend:**
 ```bash
 cd backend
-python3.13 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-# ← Edit .env with your API keys
-uvicorn main:app --reload --port 8000
+cd ..
 ```
 
-**Frontend:**
+### 3. Set up the frontend
+
 ```bash
 cd frontend
 npm install
-npm run dev
+cd ..
 ```
 
-Open **http://localhost:5173**
+### 4. Start everything
+
+```bash
+chmod +x start_all.sh
+./start_all.sh
+```
+
+Open **http://localhost:5173** — submit a form and watch the pipeline run.
 
 ---
 
-## Environment Variables
+## Configuration
 
-### Required
+All configuration lives in **`backend/.env`**. Copy from `.env.example`:
 
-| Variable | Description | Where to get |
-|:--|:--|:--|
-| `OPENROUTER_API_KEY` | OpenRouter API key | [openrouter.ai](https://openrouter.ai) |
-| `SMTP_EMAIL` | Gmail address | Your Gmail |
-| `SMTP_PASSWORD` | Gmail App Password | [Google Account → Security → App Passwords](https://myaccount.google.com/apppasswords) |
+```env
+# ── Required ──────────────────────────────────────────
+OPENROUTER_API_KEY=sk-or-v1-...       # Get from openrouter.ai
+OPENROUTER_MODEL=qwen/qwen3-235b-a22b  # Or any other OpenRouter model
 
-### Optional Enrichment (increases report quality)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_EMAIL=you@gmail.com
+SMTP_PASSWORD=xxxx xxxx xxxx xxxx     # Gmail App Password (not your login password)
+SENDER_NAME=Your Name
 
-| Variable | Description | Where to get |
-|:--|:--|:--|
-| `OPENROUTER_MODEL` | Model name (default: `qwen/qwen3-235b-a22b`) | Any OpenRouter model |
-| `FIRECRAWL_API_KEY` | Better JS-aware scraping | [firecrawl.dev](https://firecrawl.dev) |
-| `SERPER_API_KEY` | Google search context | [serper.dev](https://serper.dev) |
+# ── Business Branding (shown on PDF cover) ────────────
+BUSINESS_NAME=Your Company
+BUSINESS_TAGLINE=Data-Driven Growth
+BUSINESS_WEBSITE=https://yourcompany.com
+BUSINESS_EMAIL=contact@yourcompany.com
+BUSINESS_PHONE=+1 555 123 4567
 
-### Branding (customise the report)
+# ── Optional: Richer Scraping ─────────────────────────
+# FIRECRAWL_API_KEY=fc-...            # firecrawl.dev — handles JS-rendered sites
 
-| Variable | Default | Description |
-|:--|:--|:--|
-| `BUSINESS_NAME` | `Lead Autopilot` | Your company name (shown on PDF) |
-| `BUSINESS_TAGLINE` | `Data-Driven Insights` | PDF cover tagline |
-| `BUSINESS_EMAIL` | `contact@example.com` | Contact email on PDF |
-| `BUSINESS_PHONE` | *(empty)* | Phone on PDF |
-| `BUSINESS_WEBSITE` | *(empty)* | Website on PDF |
+# ── Optional: Web Search Context ─────────────────────
+# SERPER_API_KEY=...                  # serper.dev — Google search enrichment
 
-### Bonus Integrations
+# ── Optional: Google Sheets (Bonus) ──────────────────
+# GOOGLE_SHEETS_CREDENTIALS_FILE=service_account.json
+# GOOGLE_SHEET_NAME=Lead Autopilot Tracker
 
-| Variable | Description |
-|:--|:--|
-| `GOOGLE_SHEETS_CREDENTIALS_FILE` | Path to service account JSON |
-| `GOOGLE_SHEET_NAME` | Spreadsheet name (created if not exists) |
-| `GOOGLE_DRIVE_CREDENTIALS_FILE` | Path to service account JSON |
-| `GOOGLE_DRIVE_FOLDER_ID` | Drive folder ID for PDF archival |
+# ── Optional: Google Drive (Bonus) ────────────────────
+# GOOGLE_DRIVE_CREDENTIALS_FILE=service_account.json
+# GOOGLE_DRIVE_FOLDER_ID=your-folder-id
+```
 
----
+### Gmail App Password Setup
 
-## API Reference
-
-| Method | Endpoint | Description |
-|:--|:--|:--|
-| `POST` | `/api/leads` | Submit a lead → starts pipeline |
-| `GET` | `/api/leads/{id}/status` | Poll pipeline status |
-| `GET` | `/api/leads/{id}/pdf` | Download generated PDF |
-| `GET` | `/api/health` | Check which integrations are configured |
-
-Interactive docs: **http://localhost:8000/docs**
-
----
-
-## Error Handling Strategy
-
-Every layer has fallbacks — a report is **always** generated:
-
-| Failure | Fallback |
-|:--|:--|
-| Firecrawl fails/not configured | Falls through to HTTPX+BS4 scraper |
-| Scraper blocked/fails | AI proceeds with company name + industry only |
-| Serper not configured | Skipped silently |
-| AI analysis fails | Fallback text generated, report still created |
-| Email send fails | PDF still generated and downloadable via API |
-| Sheets/Drive fails | Logged as warning, pipeline continues |
+1. Enable 2-Factor Authentication on your Google account
+2. Go to **Google Account → Security → 2-Step Verification → App passwords**
+3. Create a new app password (select "Mail" + your device)
+4. Use the 16-character code as `SMTP_PASSWORD` in `.env`
 
 ---
 
@@ -171,78 +157,159 @@ Every layer has fallbacks — a report is **always** generated:
 
 ```
 lead-autopilot/
-├── setup.sh                     # One-command setup
-├── frontend/
-│   ├── index.html               # Lead intake form
-│   ├── style.css                # Dark glassmorphism design system
-│   ├── main.js                  # Form logic, validation, status polling
-│   └── vite.config.js           # Dev proxy to backend
 ├── backend/
-│   ├── main.py                  # FastAPI app, routes, pipeline orchestration
-│   ├── models.py                # Pydantic models (LeadSubmission, AIAnalysis, etc.)
-│   ├── enrichment/
-│   │   ├── pipeline.py          # Orchestrates all enrichment steps
-│   │   ├── scraper.py           # HTTPX + BeautifulSoup4 scraper
-│   │   ├── firecrawl_scraper.py # Firecrawl integration (optional)
-│   │   ├── web_search.py        # Serper.dev Google search (optional)
-│   │   └── ai_analyzer.py      # Qwen via OpenRouter
-│   ├── pdf/
-│   │   ├── generator.py         # WeasyPrint PDF generation
-│   │   └── templates/
-│   │       └── report.html      # Jinja2 report template (6 pages)
-│   ├── email_service/
-│   │   └── sender.py            # SMTP email with HTML body + PDF attachment
-│   ├── integrations/
-│   │   ├── sheets.py            # Google Sheets logging (bonus)
-│   │   └── drive.py             # Google Drive archival (bonus)
+│   ├── main.py                   # FastAPI app and API routes
+│   ├── tasks.py                  # Celery task — orchestrates the full pipeline
+│   ├── celery_app.py             # Celery + Redis configuration
+│   ├── database.py               # SQLAlchemy models and DB session
+│   ├── core_models.py            # Pydantic data schemas (shared source of truth)
 │   ├── requirements.txt
-│   └── .env.example
-├── output/                      # Generated PDFs (gitignored)
+│   ├── .env.example              # Template for environment variables
+│   │
+│   ├── workflows/
+│   │   └── report_pipeline.py    # Enrichment orchestration (scrape → search → AI → score)
+│   │
+│   ├── services/
+│   │   ├── scraper.py            # httpx + BeautifulSoup website scraper
+│   │   ├── resilient_scraper.py  # Scraper with circuit breaker + fallbacks
+│   │   ├── firecrawl_scraper.py  # Firecrawl API integration (optional)
+│   │   ├── metadata_scraper.py   # Lightweight metadata-only fallback
+│   │   ├── web_search.py         # Serper.dev Google search enrichment
+│   │   ├── ai_analysis.py        # OpenRouter AI prompt + parsing
+│   │   ├── resilient_ai_analysis.py  # AI with circuit breaker + fallback
+│   │   ├── fallback_generator.py # Industry-template fallback when AI fails
+│   │   ├── quality_scorer.py     # 0.0–1.0 data quality scoring
+│   │   ├── confidence_assigner.py
+│   │   ├── content_validator.py  # Hallucination / repetition detection
+│   │   ├── error_categorizer.py  # Error classification for observability
+│   │   ├── pdf_generator.py      # Jinja2 → WeasyPrint PDF pipeline
+│   │   ├── email_service.py      # Gmail SMTP with HTML template + retry
+│   │   └── templates/
+│   │       └── report.html       # Jinja2 PDF report template (5 pages)
+│   │
+│   ├── integrations/
+│   │   ├── sheets.py             # Google Sheets logging (bonus)
+│   │   ├── drive.py              # Google Drive PDF archival (bonus)
+│   │   └── webhooks.py           # Slack + CRM webhook notifications
+│   │
+│   └── utils/
+│       ├── circuit_breaker.py    # Generic async circuit breaker
+│       ├── retry.py              # Exponential-backoff decorator
+│       ├── timeout.py            # Async timeout decorator
+│       └── validation.py         # URL normalisation + schema helpers
+│
+├── frontend/
+│   └── src/app/
+│       └── page.tsx              # Single-page Next.js app (form → live progress → PDF)
+│
+├── output/                       # Generated PDFs saved here
+├── start_all.sh                  # One-command startup script
 └── README.md
 ```
 
 ---
 
-## Design Decisions
+## API Reference
 
-1. **OpenRouter + Qwen**: Uses OpenAI-compatible SDK — swap any model by changing `OPENROUTER_MODEL`. The Qwen3-235B model produces analyst-quality structured output.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Service status and integration flags |
+| `POST` | `/api/leads` | Submit a new lead (returns `lead_id`) |
+| `GET` | `/api/leads/{id}/status` | Poll pipeline status |
+| `GET` | `/api/leads/{id}/pdf` | Download the generated PDF report |
 
-2. **Firecrawl → BS4 fallback**: Modern JS-heavy sites (React/Next.js) don't render well with raw HTTPX. Firecrawl handles them cleanly. BS4 covers the rest.
+Interactive docs available at **http://localhost:8000/docs**
 
-3. **Serper.dev**: Website scraping only sees what the company says about themselves. Search results add third-party context, news, and knowledge graph facts — making the AI analysis significantly more grounded.
+### Submit a Lead (cURL)
 
-4. **FastAPI BackgroundTasks**: No Celery/Redis overhead for a prototype. The frontend polls `/status` every 2 seconds. For production scale, swap to Celery with Redis.
+```bash
+curl -X POST http://localhost:8000/api/leads \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane@acme.com",
+    "company": "Acme Corp",
+    "website": "https://acme.com",
+    "industry": "SaaS",
+    "company_size": "50-200",
+    "message": "Struggling with customer retention and onboarding drop-off."
+  }'
+```
 
-5. **WeasyPrint table-based layout**: WeasyPrint has incomplete CSS grid/flex support. The template uses `<table>` for multi-column layouts — reliable across all WeasyPrint versions.
+Response:
+```json
+{ "lead_id": "a3f1b2c4", "status": "submitted", "message": "Processing has begun." }
+```
 
-6. **In-memory status store**: A `dict` in the FastAPI process. Simple, zero dependencies. For production: add Redis or a DB.
+### Poll Status
+
+```bash
+curl http://localhost:8000/api/leads/a3f1b2c4/status
+```
+
+```json
+{
+  "lead_id": "a3f1b2c4",
+  "current_step": "enriching",
+  "steps_completed": ["submitted", "validating"],
+  "is_complete": false
+}
+```
 
 ---
 
-## Setting Up Gmail App Password
+## Bonus Features
 
-1. Enable 2-Step Verification at [myaccount.google.com/security](https://myaccount.google.com/security)
-2. Go to **Security → App Passwords**
-3. Create a new app password (name it "Lead Autopilot")
-4. Use the 16-character code as `SMTP_PASSWORD` in `.env`
+### Google Sheets Lead Tracker
 
-## Setting Up Google Sheets/Drive (Bonus)
+Automatically appends each lead's name, email, company, timestamp, and report status to a Google Sheet.
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a project → enable **Google Sheets API** and **Google Drive API**
-3. Create a **Service Account** → download the JSON credentials file
-4. Save the JSON file as `backend/service_account.json`
-5. Share your target Google Sheet with the service account email
-6. Set in `.env`:
-   ```
-   GOOGLE_SHEETS_CREDENTIALS_FILE=service_account.json
-   GOOGLE_SHEET_NAME=Lead Autopilot Tracker
-   GOOGLE_DRIVE_CREDENTIALS_FILE=service_account.json
-   GOOGLE_DRIVE_FOLDER_ID=<your-folder-id>
-   ```
+Setup:
+1. Create a Google Cloud project and enable the Sheets API
+2. Create a service account and download `service_account.json`
+3. Share your Google Sheet with the service account email
+4. Set `GOOGLE_SHEETS_CREDENTIALS_FILE=service_account.json` in `.env`
+
+### Google Drive PDF Archival
+
+Saves a copy of each generated PDF to a specified Drive folder.
+
+Setup:
+1. Enable the Drive API in your Google Cloud project
+2. Same service account as Sheets (or a new one)
+3. Share the Drive folder with the service account
+4. Set `GOOGLE_DRIVE_CREDENTIALS_FILE` and `GOOGLE_DRIVE_FOLDER_ID` in `.env`
 
 ---
 
-## License
+## How the PDF Report Is Structured
 
-MIT
+The generated PDF is a 5–6 page A4 document:
+
+| Page | Content |
+|------|---------|
+| **Cover** | Company name, industry, date, quality score, brand colours |
+| **Overview** | Website intelligence, services, tech stack |
+| **Executive Summary** | AI-written strategic summary + Digital Scorecard |
+| **SWOT Analysis** | Full 4-quadrant SWOT + risk areas + strategic opportunities |
+| **Key Findings** | Category-observation table from AI analysis |
+| **Action Roadmap** | Immediate / 30-day / 90-day prioritised recommendations |
+
+The colour theme is automatically selected based on industry (tech = indigo, finance = emerald, healthcare = teal, etc.).
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| `401 Unauthorized` from OpenRouter | Your API key is wrong or missing in `backend/.env` |
+| `SMTP authentication failed` | Use a Gmail App Password, not your login password |
+| `No module named X` | Run `pip install -r requirements.txt` inside the venv |
+| Celery not processing | Ensure Redis is running: `redis-cli ping` |
+| PDF not generating | Check `celery.log` for WeasyPrint errors |
+| Frontend can't reach backend | Ensure backend is on port 8000 and CORS is enabled |
+
+---
+
+*Built with FastAPI · Celery · Redis · OpenRouter (Qwen) · WeasyPrint · Next.js*

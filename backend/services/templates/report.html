@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Business Intelligence Report — {{ company_name }}</title>
+<style>
+  /* ─────────────────────────────────────────────────────────────────────────
+     CSS custom properties — Jinja2 injects theme colours here ONCE.
+     All other CSS below uses var(--X) so the linter/editor sees valid CSS.
+     ───────────────────────────────────────────────────────────────────────── */
+  :root {
+    --bg:      {{ theme.bg }};
+    --primary: {{ theme.primary }};
+    --accent:  {{ theme.accent }};
+    --light:   {{ theme.light }};
+  }
+
+  /* ─── Page Setup ─────────────────────────────────────────────────────────── */
+  @page { size: A4; margin: 0; }
+  @page content {
+    margin: 45pt 50pt 60pt 50pt;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 7pt;
+      color: #94a3b8;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    font-size: 10pt;
+    line-height: 1.6;
+    background: #fff;
+  }
+
+  .clearfix::after { content: ""; display: table; clear: both; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COVER PAGE
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .cover {
+    page-break-after: always;
+    background: var(--bg);
+    color: #fff;
+    width: 100%;
+    height: 297mm;
+    position: relative;
+  }
+
+  .cover-accent {
+    position: absolute;
+    top: 0; right: 0;
+    width: 40%; height: 100%;
+    background: var(--primary);
+    opacity: 0.15;
+  }
+
+  .cover-inner { position: relative; padding: 70pt 55pt 50pt 55pt; }
+
+  .cover-brand {
+    font-size: 10pt;
+    letter-spacing: 4pt;
+    text-transform: uppercase;
+    opacity: 0.6;
+    border-bottom: 1pt solid rgba(255,255,255,0.2);
+    padding-bottom: 16pt;
+    margin-bottom: 80pt;
+  }
+
+  .cover h1 {
+    font-size: 36pt;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 10pt;
+    letter-spacing: -0.5pt;
+  }
+
+  .cover-subtitle {
+    font-size: 15pt;
+    font-weight: 300;
+    opacity: 0.8;
+    margin-bottom: 60pt;
+    border-left: 3pt solid var(--accent);
+    padding-left: 14pt;
+  }
+
+  .cover-meta-table { width: 100%; border-collapse: collapse; margin-top: 40pt; }
+  .cover-meta-table td { padding: 10pt 20pt 10pt 0; vertical-align: top; width: 33.33%; }
+
+  .cover-meta-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 2pt;
+    opacity: 0.5;
+    display: block;
+    margin-bottom: 4pt;
+  }
+
+  .cover-meta-value { font-size: 11pt; font-weight: 600; }
+
+  .cover-footer {
+    position: absolute;
+    bottom: 40pt; left: 55pt; right: 55pt;
+    font-size: 8pt;
+    opacity: 0.4;
+    border-top: 1pt solid rgba(255,255,255,0.15);
+    padding-top: 12pt;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CONTENT PAGES
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .page { page: content; page-break-after: always; }
+  .page:last-child { page-break-after: avoid; }
+
+  .page-header {
+    border-bottom: 2.5pt solid var(--primary);
+    padding-bottom: 8pt;
+    margin-bottom: 26pt;
+  }
+
+  .page-header .section-title {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 2.5pt;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .page-header .page-brand {
+    float: right;
+    font-size: 7pt;
+    color: #94a3b8;
+  }
+
+  h2 {
+    font-size: 20pt;
+    font-weight: 700;
+    color: var(--bg);
+    margin-bottom: 16pt;
+    letter-spacing: -0.3pt;
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 20pt;
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    border-bottom: 1pt solid #e2e8f0;
+  }
+
+  p { margin-bottom: 10pt; text-align: justify; color: #334155; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     INFO CARDS (float-based 2-column)
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .info-row { margin-bottom: 10pt; }
+  .info-row::after { content: ""; display: table; clear: both; }
+
+  .info-card {
+    width: 48%;
+    float: left;
+    background: var(--light);
+    padding: 12pt 14pt;
+    border-radius: 4pt;
+    border-left: 3pt solid var(--primary);
+    margin-bottom: 10pt;
+  }
+
+  .info-card:nth-child(even) { float: right; }
+
+  .info-card .label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 1.5pt;
+    color: #64748b;
+    margin-bottom: 3pt;
+    font-weight: 600;
+  }
+
+  .info-card .value {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--bg);
+    word-break: break-all;
+  }
+
+  /* Quality Badge */
+  .quality-badge {
+    display: inline-block;
+    padding: 3pt 10pt;
+    border-radius: 12pt;
+    font-size: 8pt;
+    font-weight: 700;
+    color: #fff;
+  }
+  .quality-high   { background: #059669; }
+  .quality-medium { background: #d97706; }
+  .quality-low    { background: #dc2626; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SCORECARD (table-based 3-column)
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .scorecard-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8pt 0;
+    margin: 14pt 0 20pt -8pt;
+  }
+
+  .scorecard-table td {
+    width: 33.33%;
+    text-align: center;
+    padding: 18pt 10pt;
+    background: #f8fafc;
+    border: 1pt solid #e2e8f0;
+    border-radius: 6pt;
+    vertical-align: top;
+  }
+
+  .score-value {
+    font-size: 30pt;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+  }
+
+  .score-max { font-size: 13pt; color: #94a3b8; font-weight: 400; }
+
+  .score-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 1.5pt;
+    color: #64748b;
+    margin-top: 6pt;
+    font-weight: 600;
+  }
+
+  .score-bar {
+    margin: 8pt auto 0 auto;
+    width: 80%; height: 5pt;
+    background: #e2e8f0;
+    border-radius: 3pt;
+    overflow: hidden;
+  }
+
+  .score-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 3pt;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SWOT (table-based 2x2 grid)
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .swot-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8pt;
+    margin: 0 0 16pt -8pt;
+  }
+
+  .swot-table td {
+    width: 50%;
+    padding: 14pt;
+    border-radius: 6pt;
+    font-size: 9pt;
+    vertical-align: top;
+  }
+
+  .swot-strengths     { background: #ecfdf5; border: 1pt solid #a7f3d0; }
+  .swot-weaknesses    { background: #fef2f2; border: 1pt solid #fecaca; }
+  .swot-opportunities { background: #eff6ff; border: 1pt solid #bfdbfe; }
+  .swot-threats       { background: #fff7ed; border: 1pt solid #fed7aa; }
+
+  .swot-title {
+    font-weight: 700;
+    font-size: 10pt;
+    margin-bottom: 8pt;
+    padding-bottom: 5pt;
+    border-bottom: 1pt solid rgba(0,0,0,0.08);
+  }
+
+  .swot-strengths .swot-title     { color: #059669; }
+  .swot-weaknesses .swot-title    { color: #dc2626; }
+  .swot-opportunities .swot-title { color: #2563eb; }
+  .swot-threats .swot-title       { color: #ea580c; }
+
+  .swot-table ul { list-style: none; padding: 0; margin: 0; }
+
+  .swot-table li { padding: 3pt 0 3pt 14pt; position: relative; line-height: 1.45; }
+  .swot-table li::before { content: "\2022"; position: absolute; left: 0; color: #64748b; font-weight: bold; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     FINDINGS TABLE
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .findings-table { width: 100%; border-collapse: collapse; margin-bottom: 20pt; font-size: 9pt; }
+
+  .findings-table th {
+    background: var(--bg);
+    color: #fff;
+    padding: 8pt 14pt;
+    text-align: left;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
+    font-weight: 600;
+  }
+
+  .findings-table th:first-child { border-radius: 4pt 0 0 0; width: 25%; }
+  .findings-table th:last-child  { border-radius: 0 4pt 0 0; }
+
+  .findings-table td { padding: 10pt 14pt; border-bottom: 1pt solid #e2e8f0; vertical-align: top; }
+  .findings-table tr:nth-child(even) td { background: #f8fafc; }
+  .findings-table tr:last-child td { border-bottom: 2pt solid #e2e8f0; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ACTION ROADMAP (table-based)
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .roadmap-table { width: 100%; border-collapse: collapse; margin-bottom: 20pt; }
+  .roadmap-table td { padding: 12pt 0; border-bottom: 1pt solid #f1f5f9; vertical-align: top; }
+  .roadmap-table td:first-child { width: 90pt; padding-right: 14pt; }
+
+  .roadmap-timeline {
+    display: inline-block;
+    padding: 5pt 10pt;
+    background: var(--light);
+    color: var(--bg);
+    border-radius: 4pt;
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    text-align: center;
+    width: 100%;
+  }
+
+  .roadmap-rec { font-weight: 600; margin-bottom: 5pt; font-size: 10pt; color: #1e293b; }
+
+  .tag { display: inline-block; font-size: 7pt; padding: 2pt 8pt; border-radius: 10pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5pt; margin-right: 4pt; }
+  .tag-impact { background: #dbeafe; color: #1d4ed8; }
+  .tag-effort { background: #fef3c7; color: #92400e; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BULLET LISTS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .bullet-list { list-style: none; padding: 0; margin-bottom: 16pt; }
+  .bullet-list li { padding: 4pt 0 4pt 16pt; position: relative; line-height: 1.55; color: #334155; }
+  .bullet-list li::before { content: "\25B8"; position: absolute; left: 0; color: var(--primary); font-weight: bold; font-size: 9pt; }
+
+  /* ─── Highlight box ───────────────────────────────────────────────────────── */
+  .highlight-box {
+    background: var(--light);
+    border-left: 4pt solid var(--primary);
+    padding: 14pt 16pt;
+    margin: 14pt 0;
+    border-radius: 0 4pt 4pt 0;
+  }
+  .highlight-box p { margin: 0; color: var(--bg); }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     FOOTER & DISCLAIMER
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .report-footer {
+    margin-top: 30pt;
+    padding-top: 12pt;
+    border-top: 1pt solid #e2e8f0;
+    text-align: center;
+    font-size: 7pt;
+    color: #94a3b8;
+  }
+
+  .disclaimer {
+    background: #f8fafc;
+    padding: 12pt 14pt;
+    border-radius: 4pt;
+    font-size: 8pt;
+    color: #64748b;
+    margin-top: 24pt;
+    border: 1pt solid #e2e8f0;
+    line-height: 1.5;
+  }
+
+  .disclaimer strong { color: #475569; }
+</style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       COVER PAGE
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="cover">
+    <div class="cover-accent"></div>
+    <div class="cover-inner">
+      <div class="cover-brand">{{ business_name }}</div>
+      <h1>Business Intelligence<br>Report</h1>
+      <div class="cover-subtitle">
+        {{ company_name }}<br>
+        <span style="font-size: 11pt; opacity: 0.7;">{{ industry }} Sector</span>
+      </div>
+      <table class="cover-meta-table">
+        <tr>
+          <td>
+            <span class="cover-meta-label">Prepared On</span>
+            <span class="cover-meta-value">{{ report_date }}</span>
+          </td>
+          <td>
+            <span class="cover-meta-label">Data Quality</span>
+            <span class="cover-meta-value">{{ "%.0f"|format(quality_score * 100) }}%</span>
+          </td>
+          <td>
+            <span class="cover-meta-label">Confidence</span>
+            <span class="cover-meta-value">{% if quality_score >= 0.7 %}High{% elif quality_score >= 0.4 %}Moderate{% else %}Limited{% endif %}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="cover-footer">
+      {{ business_tagline }} &nbsp;&bull;&nbsp; {{ business_email }}
+      {% if business_phone %} &nbsp;&bull;&nbsp; {{ business_phone }}{% endif %}
+      {% if business_website %} &nbsp;&bull;&nbsp; {{ business_website }}{% endif %}
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 1 — COMPANY OVERVIEW
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-header clearfix">
+      <span class="section-title">Company Overview</span>
+      <span class="page-brand">{{ business_name }}</span>
+    </div>
+
+    <h2>{{ company_name }}</h2>
+
+    <div class="info-row clearfix">
+      <div class="info-card">
+        <div class="label">Industry</div>
+        <div class="value">{{ industry }}</div>
+      </div>
+      <div class="info-card">
+        <div class="label">Website</div>
+        <div class="value">{{ website }}</div>
+      </div>
+    </div>
+    <div class="info-row clearfix">
+      <div class="info-card">
+        <div class="label">Company Size</div>
+        <div class="value">{{ company_size or 'Not specified' }}</div>
+      </div>
+      <div class="info-card">
+        <div class="label">Data Quality</div>
+        <div class="value">
+          <span class="quality-badge {% if quality_score >= 0.7 %}quality-high{% elif quality_score >= 0.4 %}quality-medium{% else %}quality-low{% endif %}">
+            {{ "%.0f"|format(quality_score * 100) }}%
+          </span>
+          &nbsp;{% if quality_score >= 0.7 %}High Confidence{% elif quality_score >= 0.4 %}Moderate{% else %}Limited Data{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if scraped.title or scraped.meta_description %}
+    <h3>Website Intelligence</h3>
+    {% if scraped.title %}<p><strong>Page Title:</strong> {{ scraped.title }}</p>{% endif %}
+    {% if scraped.meta_description %}<p><strong>Meta Description:</strong> {{ scraped.meta_description }}</p>{% endif %}
+    {% if scraped.hero_text %}
+    <div class="highlight-box">
+      <p><strong>Brand Message:</strong> {{ scraped.hero_text[:400] }}</p>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if scraped.services %}
+    <h3>Services Identified</h3>
+    <ul class="bullet-list">
+      {% for service in scraped.services[:8] %}<li>{{ service }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if scraped.tech_stack %}
+    <h3>Technology Stack Detected</h3>
+    <ul class="bullet-list">
+      {% for tech in scraped.tech_stack[:8] %}<li>{{ tech }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 2 — EXECUTIVE SUMMARY & SCORECARD
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-header clearfix">
+      <span class="section-title">Executive Summary</span>
+      <span class="page-brand">{{ business_name }}</span>
+    </div>
+
+    <h2>Executive Summary</h2>
+    <p>{{ analysis.executive_summary }}</p>
+
+    {% if analysis.current_state_assessment %}
+    <h3>Current State Assessment</h3>
+    <p>{{ analysis.current_state_assessment }}</p>
+    {% endif %}
+
+    <h3>Digital Scorecard</h3>
+    <table class="scorecard-table">
+      <tr>
+        <td>
+          <div class="score-value">{{ analysis.scorecard.digital_maturity }}<span class="score-max">/10</span></div>
+          <div class="score-label">Digital Maturity</div>
+        </td>
+        <td>
+          <div class="score-value">{{ analysis.scorecard.ai_readiness }}<span class="score-max">/10</span></div>
+          <div class="score-label">AI Readiness</div>
+        </td>
+        <td>
+          <div class="score-value">{{ analysis.scorecard.seo_foundation }}<span class="score-max">/10</span></div>
+          <div class="score-label">SEO Foundation</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 3 — SWOT ANALYSIS
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="page-header clearfix">
+      <span class="section-title">SWOT Analysis</span>
+      <span class="page-brand">{{ business_name }}</span>
+    </div>
+
+    <h2>SWOT Analysis</h2>
+
+    <table class="swot-table">
+      <tr>
+        <td class="swot-strengths">
+          <div class="swot-title">&#10022; Strengths</div>
+          <ul>
+            {% for item in analysis.swot.strengths %}<li>{{ item }}</li>{% endfor %}
+            {% if not analysis.swot.strengths %}<li><em>No strengths identified (limited data)</em></li>{% endif %}
+          </ul>
+        </td>
+        <td class="swot-weaknesses">
+          <div class="swot-title">&#9888; Weaknesses</div>
+          <ul>
+            {% for item in analysis.swot.weaknesses %}<li>{{ item }}</li>{% endfor %}
+            {% if not analysis.swot.weaknesses %}<li><em>No weaknesses identified (limited data)</em></li>{% endif %}
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td class="swot-opportunities">
+          <div class="swot-title">&#9733; Opportunities</div>
+          <ul>
+            {% for item in analysis.swot.opportunities %}<li>{{ item }}</li>{% endfor %}
+            {% if not analysis.swot.opportunities %}<li><em>No opportunities identified (limited data)</em></li>{% endif %}
+          </ul>
+        </td>
+        <td class="swot-threats">
+          <div class="swot-title">&#9889; Threats</div>
+          <ul>
+            {% for item in analysis.swot.threats %}<li>{{ item }}</li>{% endfor %}
+            {% if not analysis.swot.threats %}<li><em>No threats identified (limited data)</em></li>{% endif %}
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    {% if analysis.risk_areas %}
+    <h3>Risk Areas</h3>
+    <ul class="bullet-list">
+      {% for risk in analysis.risk_areas %}<li>{{ risk }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if analysis.strategic_opportunities %}
+    <h3>Strategic Opportunities</h3>
+    <ul class="bullet-list">
+      {% for opp in analysis.strategic_opportunities %}<li>{{ opp }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 4 — KEY FINDINGS (conditional)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  {% if analysis.key_findings %}
+  <div class="page">
+    <div class="page-header clearfix">
+      <span class="section-title">Key Findings</span>
+      <span class="page-brand">{{ business_name }}</span>
+    </div>
+
+    <h2>Key Findings</h2>
+
+    <table class="findings-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Observation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for finding in analysis.key_findings %}
+        <tr>
+          <td><strong>{{ finding.get('category', 'General') }}</strong></td>
+          <td>{{ finding.get('observation', finding.get('finding', '—')) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       PAGE 5 — ACTION ROADMAP
+       ═══════════════════════════════════════════════════════════════════════ -->
+  {% if analysis.action_roadmap %}
+  <div class="page">
+    <div class="page-header clearfix">
+      <span class="section-title">Action Roadmap</span>
+      <span class="page-brand">{{ business_name }}</span>
+    </div>
+
+    <h2>Recommended Action Roadmap</h2>
+
+    <table class="roadmap-table">
+      {% for item in analysis.action_roadmap %}
+      <tr>
+        <td><div class="roadmap-timeline">{{ item.timeline }}</div></td>
+        <td>
+          <div class="roadmap-rec">{{ item.recommendation }}</div>
+          <span class="tag tag-impact">Impact: {{ item.impact }}</span>
+          <span class="tag tag-effort">Effort: {{ item.effort }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This report was generated using automated web scraping and AI-powered
+      analysis. Data quality score: {{ "%.0f"|format(quality_score * 100) }}%.
+      Recommendations should be validated with internal stakeholders before implementation.
+      The analysis reflects publicly available information at the time of generation.
+    </div>
+
+    <div class="report-footer">
+      <p>Prepared by {{ business_name }} &nbsp;&bull;&nbsp; {{ business_email }}
+        {% if business_website %} &nbsp;&bull;&nbsp; {{ business_website }}{% endif %}
+      </p>
+      <p>Generated on {{ report_date }} &nbsp;&bull;&nbsp; Confidential</p>
+    </div>
+  </div>
+  {% endif %}
+
+</body>
+</html>

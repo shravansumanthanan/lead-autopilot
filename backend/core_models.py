@@ -7,7 +7,8 @@ pipeline status tracking, and API responses.
 
 from __future__ import annotations
 
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -100,7 +101,7 @@ class EnrichedCompanyData(BaseModel):
     lead: LeadSubmission
     scraped: ScrapedData = Field(default_factory=ScrapedData)
     analysis: AIAnalysis = Field(default_factory=AIAnalysis)
-    enriched_at: datetime = Field(default_factory=datetime.utcnow)
+    enriched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     data_quality_score: float = Field(default=0.0, ge=0.0, le=1.0, description="0.0-1.0 quality rating")
     confidence_level: str = Field(default="Low")
     confidence_reason: str = Field(default="Limited data available.")
@@ -132,7 +133,7 @@ class LeadStatus(BaseModel):
     error_message: Optional[str] = None
     pdf_path: Optional[str] = None
     email_sent: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     quality_score: dict = Field(default_factory=dict)
     confidence_level: Optional[str] = None
@@ -162,3 +163,47 @@ class StatusResponse(BaseModel):
     steps_completed: list[PipelineStep]
     error_message: Optional[str] = None
     is_complete: bool = False
+
+
+# ── Quality Scoring ───────────────────────────────────────────────────────────
+
+class QualityScoreComponents(BaseModel):
+    """Breakdown of quality scores by data source."""
+
+    scraped_data_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    ai_analysis_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    web_search_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    composite_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+# ── Error Tracking ────────────────────────────────────────────────────────────
+
+class ErrorCategory(str, Enum):
+    """Standardized error categories for monitoring."""
+
+    INPUT_VALIDATION = "input_validation"
+    SCRAPING_BLOCKED = "scraping_blocked"
+    SCRAPING_TIMEOUT = "scraping_timeout"
+    AI_TIMEOUT = "ai_timeout"
+    AI_INVALID_RESPONSE = "ai_invalid_response"
+    PDF_RENDERING = "pdf_rendering"
+    EMAIL_SMTP = "email_smtp"
+    API_RATE_LIMIT = "api_rate_limit"
+    API_UNAVAILABLE = "api_unavailable"
+    CIRCUIT_BREAKER_OPEN = "circuit_breaker_open"
+    UNKNOWN = "unknown"
+
+
+class ErrorEvent(BaseModel):
+    """Structured error event for logging and monitoring."""
+
+    error_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    lead_id: str
+    category: ErrorCategory
+    component: str
+    message: str
+    technical_details: Optional[str] = None
+    retry_attempt: int = Field(default=0, ge=0)
+    recoverable: bool = True
+    recovery_action: Optional[str] = None
+    user_facing_message: str = ""

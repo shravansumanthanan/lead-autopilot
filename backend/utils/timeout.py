@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from functools import wraps
 from typing import Callable, Any, TypeVar, Optional
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ timeout_manager = TimeoutManager()
 def with_timeout(timeout: Optional[float] = None) -> Callable:
     """Decorator for wrapping an async function with a timeout."""
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
         async def wrapper(*args, **kwargs):
             return await timeout_manager.execute_with_timeout(func, timeout, *args, **kwargs)
         return wrapper

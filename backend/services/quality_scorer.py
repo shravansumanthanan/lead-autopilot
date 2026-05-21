@@ -1,5 +1,5 @@
 import logging
-from models.quality import QualityScoreComponents
+from core_models import QualityScoreComponents
 
 logger = logging.getLogger(__name__)
 

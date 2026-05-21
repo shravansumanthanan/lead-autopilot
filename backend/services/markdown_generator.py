@@ -1,13 +1,11 @@
 import os
 from string import Template
-from core_models import EnrichedCompanyData
+from backend.core_models import EnrichedCompanyData
 
 class MarkdownReportGenerator:
     """Generates markdown reports from EnrichedCompanyData."""
 
-    def __init__(self, template_path: str = None):
-        if template_path is None:
-            template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "report_template.md")
+    def __init__(self, template_path: str = "backend/templates/report_template.md"):
         self.template_path = template_path
 
     def _load_template(self) -> str:
@@ -23,7 +21,6 @@ class MarkdownReportGenerator:
         def format_list(items):
             return "\n".join([f"  * {item}" for item in items]) if items else "  * None identified"
 
-        # Format SWOT
         swot = data.analysis.swot
         if not swot:
             swot_strengths = format_list([])
@@ -44,9 +41,9 @@ class MarkdownReportGenerator:
         # Format Action Roadmap
         roadmap_rows = []
         for action in data.analysis.action_roadmap:
-            row = f"| {action.recommendation} | {action.timeline} | {getattr(action, 'description', '')} | {getattr(action, 'priority', 'Medium')} | {action.effort} | {action.impact} |"
+            row = f"| {action.recommendation} | {action.timeline} | {action.effort} | {action.impact} |"
             roadmap_rows.append(row)
-        action_roadmap = "\n".join(roadmap_rows) if roadmap_rows else "| No actions identified | - | - | - | - | - |"
+        action_roadmap = "\n".join(roadmap_rows) if roadmap_rows else "| No actions identified | - | - | - |"
 
         mapping = {
             "company_name": data.lead.company,

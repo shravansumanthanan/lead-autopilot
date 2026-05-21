@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
-from core_models import EnrichedCompanyData, LeadSubmission, AIAnalysis, ActionItem, ScrapedData
-from services.markdown_generator import MarkdownReportGenerator
+from backend.core_models import EnrichedCompanyData, LeadSubmission, AIAnalysis, ActionItem, ScrapedData
+from backend.services.markdown_generator import MarkdownReportGenerator
 
 def test_generate_markdown_report():
     lead = LeadSubmission(
@@ -19,7 +19,10 @@ def test_generate_markdown_report():
              "strengths": ["Strong engineering"],
              "weaknesses": ["Slow marketing"]
         },
-        action_roadmap=[ActionItem(recommendation="Scale", timeline="Q1", description="desc", priority="High", effort="Low", impact="High"), ActionItem(recommendation="Wait", timeline="Q2", description="wait", priority="Low", effort="Low", impact="Low")]
+        action_roadmap=[
+            ActionItem(recommendation="Scale", timeline="Q1", effort="Low", impact="High"),
+            ActionItem(recommendation="Wait", timeline="Q2", effort="Low", impact="Low")
+        ]
     )
     data = EnrichedCompanyData(
         lead=lead,
@@ -43,4 +46,4 @@ def test_generate_markdown_report():
     assert "This is the exec summary" in report
     assert "Strong engineering" in report
     assert "Scale" in report
-    assert "| Scale | Q1 |" in report
+    assert "| Scale | Q1 | Low | High |" in report

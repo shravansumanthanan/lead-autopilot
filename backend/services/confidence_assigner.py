@@ -1,30 +1,58 @@
-from models.quality import ConfidenceLevel, ConfidenceMetadata, QualityScoreComponents
+"""
+Confidence Level Assignment.
+
+Assigns confidence levels (High/Medium/Low) based on composite quality scores
+and generates human-readable explanations of data availability.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from core_models import QualityScoreComponents
+
+
+class ConfidenceLevel:
+    """Confidence level constants."""
+    HIGH = "High"
+    MEDIUM = "Medium"
+    LOW = "Low"
+
+
+@dataclass
+class ConfidenceMetadata:
+    """Structured metadata about confidence assessment."""
+    level: str = ConfidenceLevel.LOW
+    reason: str = ""
+    available_sources: list[str] = field(default_factory=list)
+    missing_sources: list[str] = field(default_factory=list)
+
 
 class ConfidenceLevelAssigner:
     """Assigns a confidence level based on quality score and identifies data gaps."""
-    
-    # Thresholds mapping to acceptance criteria 5.1, 5.2, 5.3
+
+    # Thresholds
     HIGH_THRESHOLD = 0.8
     MEDIUM_THRESHOLD = 0.4
-    
+
     def assign_confidence(self, scores: QualityScoreComponents) -> ConfidenceMetadata:
         """Assign confidence level based on total quality score."""
         level = self._determine_level(scores.composite_score)
         available = self._identify_available_sources(scores)
         missing = self._identify_missing_sources(scores)
         reason = self._generate_confidence_reason(level, available, missing)
-        
+
         return ConfidenceMetadata(
             level=level,
             reason=reason,
             available_sources=available,
-            missing_sources=missing
+            missing_sources=missing,
         )
-        
-    def _determine_level(self, composite_score: float) -> ConfidenceLevel:
+
+    def _determine_level(self, composite_score: float) -> str:
         if composite_score >= self.HIGH_THRESHOLD:
             return ConfidenceLevel.HIGH
-        elif self.MEDIUM_THRESHOLD <= composite_score < self.HIGH_THRESHOLD:
+        elif composite_score >= self.MEDIUM_THRESHOLD:
             return ConfidenceLevel.MEDIUM
         return ConfidenceLevel.LOW
 
@@ -48,7 +76,7 @@ class ConfidenceLevelAssigner:
             sources.append("web_search")
         return sources
 
-    def _generate_confidence_reason(self, level: ConfidenceLevel, available: list[str], missing: list[str]) -> str:
+    def _generate_confidence_reason(self, level: str, available: list[str], missing: list[str]) -> str:
         if level == ConfidenceLevel.HIGH:
             return "High confidence: Core data points and AI analysis were successfully gathered."
         elif level == ConfidenceLevel.MEDIUM:
@@ -58,7 +86,7 @@ class ConfidenceLevelAssigner:
             if "ai_analysis" in missing:
                 reasons.append("AI analysis could not be fully completed.")
             if "web_search" in missing:
-                reasons.append("Web search yielded limit results.")
+                reasons.append("Web search yielded limited results.")
             return " ".join(reasons)
         else:
             reasons = ["Low confidence: Minimal data available."]

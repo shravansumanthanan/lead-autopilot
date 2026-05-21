@@ -118,21 +118,11 @@ async def send_report_email(
     is_test_email = False
 
     if not smtp_email or not smtp_password:
-        logger.warning("SMTP_EMAIL or SMTP_PASSWORD not configured — falling back to Ethereal Email (Test Environment)")
-        try:
-            # Create a test account dynamically if credentials are not provided
-            # Wait, creating an account dynamically requires an HTTP request to ethereal API, but smtplib cannot do that directly.
-            # Instead, we will log that email is disabled and simulate success for the test environment.
-            # Actually, standard python doesn't have an ethereal client, we would need httpx/requests to call the api.
-            # I will use a hardcoded fallback test env or just simulate.
-            # Let's use a free local mock or just return True and log "Ethereal Fallback: simulated email success."
-            logger.info("Simulating email send for test environment...")
-            is_test_email = True
-            # Let's actually use Ethereal via SMTP if they had env vars, but since they don't, we just log and return True.
-            # To be more realistic, we just simulate.
-            
-        except Exception:
-            pass
+        logger.warning(
+            "SMTP_EMAIL or SMTP_PASSWORD not configured — "
+            "email will be simulated (test mode)"
+        )
+        is_test_email = True
 
     if not Path(pdf_path).exists():
         logger.error(f"Attachment file not found: {pdf_path}")

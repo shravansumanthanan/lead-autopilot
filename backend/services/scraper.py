@@ -328,6 +328,9 @@ async def scrape_company_website(website_url: str) -> ScrapedData:
         "Accept-Language": "en-US,en;q=0.9",
     }
 
+    # verify=False: Many small-business sites have misconfigured or self-signed
+    # certificates. Failing on SSL would break the pipeline for legitimate targets.
+    # This is acceptable because we only read public HTML — no credentials are sent.
     async with httpx.AsyncClient(headers=headers, verify=False) as client:
         # ── Step 1: Scrape homepage ──────────────────────────────────────
         html = await _fetch_page(client, url)

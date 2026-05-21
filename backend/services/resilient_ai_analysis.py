@@ -99,8 +99,12 @@ class ResilientAIAnalysisService:
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.7,
-            max_tokens=1500,
+            temperature=0.6,
+            max_tokens=2500,
+            extra_headers={
+                "HTTP-Referer": "https://github.com/lead-autopilot",
+                "X-Title": "Lead Autopilot",
+            },
         )
 
         response_text = response.choices[0].message.content or ""
