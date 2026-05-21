@@ -42,7 +42,7 @@ fi
 echo ""
 echo "→ Setting up Python backend..."
 
-cd backend
+cd ../backend
 $PYTHON -m venv venv
 source venv/bin/activate
 pip install --quiet --upgrade pip

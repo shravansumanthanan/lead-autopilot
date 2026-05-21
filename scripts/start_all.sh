@@ -4,7 +4,7 @@
 # =============================================================================
 set -e
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND="$PROJECT_ROOT/backend"
 FRONTEND="$PROJECT_ROOT/frontend"
 
