@@ -132,6 +132,8 @@ DATABASE_URL=sqlite:///./leads.db
 
 ### 3. Start
 
+You can start the entire stack using our quick-launch script:
+
 ```bash
 ./scripts/start_all.sh
 ```
@@ -140,6 +142,35 @@ DATABASE_URL=sqlite:///./leads.db
 |---|---|
 | Frontend | http://localhost:5173 |
 | Backend API Docs | http://localhost:8000/docs |
+
+#### Running Services Individually (Recommended for Debugging)
+
+If you prefer to run services in separate terminals to monitor logs individually:
+
+**Terminal 1: Start Redis Broker**
+```bash
+brew services start redis
+```
+
+**Terminal 2: Start Python Backend API (FastAPI)**
+```bash
+cd backend
+source venv/bin/activate
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 3: Start Celery Worker Pipeline**
+```bash
+cd backend
+source venv/bin/activate
+celery -A celery_app worker --loglevel=info
+```
+
+**Terminal 4: Start Frontend Dev Server (Next.js)**
+```bash
+cd frontend
+npm run dev
+```
 
 ---
 
@@ -222,15 +253,52 @@ curl -X POST http://localhost:8000/api/leads \
     "website": "https://vercel.com",
     "industry": "Cloud Infrastructure"
   }'
-# → 202 Accepted: { "lead_id": "a1b2c3d4", "status": "submitted" }
+```
+
+**Response (`202 Accepted`):**
+```json
+{
+  "lead_id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+  "status": "submitted",
+  "message": "Lead submitted and enqueued for enrichment pipeline."
+}
 ```
 
 ### Example: Poll for Completion
 
 ```bash
 curl http://localhost:8000/api/leads/a1b2c3d4/status
-# → { "current_step": "complete", "is_complete": true }
+```
 
+**Response — In Progress (`200 OK`):**
+```json
+{
+  "lead_id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+  "status": "processing",
+  "current_step": "scraping_company_website",
+  "progress": 0.25,
+  "is_complete": false,
+  "error": null
+}
+```
+
+**Response — Completed (`200 OK`):**
+```json
+{
+  "lead_id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+  "status": "complete",
+  "current_step": "complete",
+  "progress": 1.0,
+  "is_complete": true,
+  "error": null,
+  "quality_score": 0.92,
+  "confidence_level": "High"
+}
+```
+
+### Example: Download Report
+
+```bash
 curl -O http://localhost:8000/api/leads/a1b2c3d4/pdf
 ```
 
@@ -265,6 +333,20 @@ All configuration is managed through `backend/.env`. See [`backend/.env.example`
 
 - **Development** (default): SQLite — zero config, runs instantly.
 - **Production**: Set `DATABASE_URL=postgresql://user:pass@host:5432/lead_autopilot` in `.env`. The engine automatically switches to a connection-pooled PostgreSQL driver (`psycopg2-binary`) with `NullPool` for Celery worker safety.
+
+---
+
+## 🔍 Troubleshooting
+
+### WeasyPrint macOS Library Errors
+If you see errors related to `cairo`, `pango`, or shared libraries when generating PDFs on macOS, run:
+```bash
+brew install pango cairo libffi gdk-pixbuf
+```
+If errors persist, you may need to explicitly export the library paths in your shell profile:
+```bash
+export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib:$DYLD_FALLBACK_LIBRARY_PATH
+```
 
 ---
 
