@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, timezone
 from celery_app import celery_app
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from core_models import LeadSubmission, EnrichedCompanyData, PipelineStep
 from database import SessionLocal, DBLeadStatus
 from workflows.report_pipeline import run_enrichment_pipeline
@@ -21,9 +23,15 @@ def update_db_status(db, lead_id: str, current_step: PipelineStep, completed_ste
     if status:
         status.current_step = current_step.value
         if completed_step:
-            steps = status.steps_completed
+            # Reassign to a new list so SQLAlchemy's JSON column change tracker
+            # detects the mutation. In-place .append() on a JSON column is
+            # not automatically tracked without flag_modified.
+            steps = list(status.steps_completed or [])
             steps.append(completed_step.value)
             status.steps_completed = steps
+            # Belt-and-suspenders: explicitly mark the JSON column as dirty
+            # so SQLAlchemy's unit-of-work always flushes the new value.
+            flag_modified(status, "steps_completed")
         for k, v in kwargs.items():
             setattr(status, k, v)
         db.commit()

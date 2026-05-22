@@ -8,6 +8,12 @@ sqlalchemy==2.0.38
 celery==5.4.0
 redis==5.2.1
 
+# Database drivers
+# psycopg2-binary is the PostgreSQL adapter for SQLAlchemy.
+# Used automatically when DATABASE_URL starts with postgresql://.
+# Leave commented out if running SQLite only (development).
+psycopg2-binary==2.9.10
+
 # Data Enrichment
 httpx==0.28.1
 beautifulsoup4==4.13.4

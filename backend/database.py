@@ -1,94 +1,122 @@
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker
-from datetime import datetime, timezone
-import json
+"""
+Database layer for Lead Autopilot.
+
+Key design decisions:
+- Native SQLAlchemy JSON columns replace custom Python property serialisation.
+  SQLAlchemy transparently handles (de)serialisation; no manual json.loads/dumps.
+- The engine is configured for both SQLite (development) and PostgreSQL
+  (production).  When DATABASE_URL begins with "postgresql", the engine uses
+  connection-pool settings and NullPool for Celery worker sub-processes.
+- check_same_thread is only passed for SQLite connections.
+"""
+
+from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./leads.db")
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    String,
+    create_engine,
+    text,
+)
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# ── SQLAlchemy JSON type ──────────────────────────────────────────────────────
+# sqlalchemy.types.JSON is natively supported for both SQLite (as TEXT) and
+# PostgreSQL (as the native JSONB-compatible JSON type).  It removes the need
+# for manual json.loads / json.dumps property wrappers entirely.
+from sqlalchemy import JSON
+
+# ── Engine Configuration ──────────────────────────────────────────────────────
+
+DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./leads.db")
+
+_is_sqlite = DATABASE_URL.startswith("sqlite")
+_is_postgres = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres")
+
+if _is_postgres:
+    # PostgreSQL: use a proper connection pool.
+    # NullPool is safe for Celery workers (each task gets its own connection).
+    from sqlalchemy.pool import NullPool  # type: ignore
+
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=NullPool,
+        # echo=True,  # Uncomment to log all SQL for debugging
+    )
+elif _is_sqlite:
+    # SQLite: disable same-thread check (FastAPI runs on multiple threads via
+    # Starlette's threadpool; Celery workers also share the file).
+    # NOTE: SQLite is fine for development / single-worker use.
+    # Migrate to PostgreSQL for any multi-worker production deployment.
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    # Generic fallback for other databases (e.g., MySQL).
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
+
+# ── ORM Model ─────────────────────────────────────────────────────────────────
+
 class DBLeadStatus(Base):
+    """
+    Persistent record of a lead's enrichment pipeline state.
+
+    Structured fields (lists, dicts) use SQLAlchemy's JSON column type so
+    Python objects are stored and retrieved without manual serialisation code.
+    """
+
     __tablename__ = "lead_statuses"
 
     lead_id = Column(String, primary_key=True, index=True)
     company_name = Column(String)
     email = Column(String)
-    
+
     current_step = Column(String, default="submitted")
-    # Store steps_completed as JSON string
-    steps_completed_json = Column(String, default="[]")
-    
+
+    # ── Native JSON columns ───────────────────────────────────────────────────
+    # SQLAlchemy automatically serialises Python list/dict → database text/JSON
+    # and deserialises back on read.  No property wrappers required.
+    steps_completed = Column(JSON, default=list, nullable=False)
+    pipeline_step_statuses = Column(JSON, default=dict, nullable=False)
+    errors = Column(JSON, default=list, nullable=False)
+    warnings = Column(JSON, default=list, nullable=False)
+    quality_score = Column(JSON, default=dict, nullable=False)
+
+    # ── Scalar fields ─────────────────────────────────────────────────────────
     error_message = Column(String, nullable=True)
     pdf_path = Column(String, nullable=True)
     email_sent = Column(Boolean, default=False)
-    
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)
 
-    quality_score = Column(String, default="{}")
     confidence_level = Column(String, nullable=True)
     confidence_reason = Column(String, nullable=True)
-    
-    pipeline_step_statuses_json = Column(String, default="{}")
-    errors_json = Column(String, default="[]")
-    warnings_json = Column(String, default="[]")
-    
+
     is_retry = Column(Boolean, default=False)
     original_lead_id = Column(String, nullable=True)
 
-    @property
-    def steps_completed(self) -> list[str]:
-        try:
-            return json.loads(self.steps_completed_json)
-        except Exception:
-            return []
 
-    @steps_completed.setter
-    def steps_completed(self, val: list[str]):
-        self.steps_completed_json = json.dumps(val)
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-    @property
-    def pipeline_step_statuses(self) -> dict:
-        try:
-            return json.loads(self.pipeline_step_statuses_json)
-        except Exception:
-            return {}
-
-    @pipeline_step_statuses.setter
-    def pipeline_step_statuses(self, val: dict):
-        self.pipeline_step_statuses_json = json.dumps(val)
-
-    @property
-    def errors(self) -> list:
-        try:
-            return json.loads(self.errors_json)
-        except Exception:
-            return []
-
-    @errors.setter
-    def errors(self, val: list):
-        self.errors_json = json.dumps(val)
-
-    @property
-    def warnings(self) -> list:
-        try:
-            return json.loads(self.warnings_json)
-        except Exception:
-            return []
-
-    @warnings.setter
-    def warnings(self, val: list):
-        self.warnings_json = json.dumps(val)
-
-def init_db():
+def init_db() -> None:
+    """Create all tables if they do not already exist."""
     Base.metadata.create_all(bind=engine)
 
+
 def get_db():
+    """FastAPI dependency that yields a database session and closes it after use."""
     db = SessionLocal()
     try:
         yield db
