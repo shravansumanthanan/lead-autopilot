@@ -130,6 +130,7 @@ class LeadStatus(BaseModel):
     lead_id: str
     current_step: PipelineStep = PipelineStep.SUBMITTED
     steps_completed: list[PipelineStep] = Field(default_factory=list)
+    token: Optional[str] = None
     error_message: Optional[str] = None
     pdf_path: Optional[str] = None
     email_sent: bool = False
@@ -151,6 +152,7 @@ class LeadSubmitResponse(BaseModel):
     """Response after successfully submitting a lead."""
 
     lead_id: str
+    token: str
     message: str = "Lead submitted successfully. Processing has begun."
     status: PipelineStep = PipelineStep.SUBMITTED
 

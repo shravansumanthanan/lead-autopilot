@@ -44,3 +44,7 @@ token.json
 *.db
 *.sqlite
 *.sqlite3
+
+# Explicit backend exclusions
+backend/leads.db
+backend/.env

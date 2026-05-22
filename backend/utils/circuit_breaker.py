@@ -30,14 +30,20 @@ class CircuitBreakerManager:
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.state = CircuitBreakerState()
-        self._lock = asyncio.Lock()
+        self._lock = None
+
+    @property
+    def lock(self) -> asyncio.Lock:
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
 
     def _get_current_time(self) -> float:
         return asyncio.get_event_loop().time()
 
     async def _check_state(self) -> CircuitBreakerStateEnum:
         """Evaluate and possibly update state before a call."""
-        async with self._lock:
+        async with self.lock:
             if self.state.state == CircuitBreakerStateEnum.OPEN:
                 if self.state.last_failure_time is not None:
                     elapsed = self._get_current_time() - self.state.last_failure_time
@@ -48,7 +54,7 @@ class CircuitBreakerManager:
 
     async def _record_success(self):
         """Record a successful execution."""
-        async with self._lock:
+        async with self.lock:
             if self.state.state == CircuitBreakerStateEnum.HALF_OPEN or self.state.failure_count > 0:
                 logger.info(f"Circuit breaker recovered. State transitioning to CLOSED.")
                 self.state.state = CircuitBreakerStateEnum.CLOSED
@@ -57,7 +63,7 @@ class CircuitBreakerManager:
 
     async def _record_failure(self):
         """Record a failed execution."""
-        async with self._lock:
+        async with self.lock:
             self.state.failure_count += 1
             self.state.last_failure_time = self._get_current_time()
             
@@ -86,14 +92,14 @@ class CircuitBreakerManager:
 
     async def force_open(self):
         """Manually open the circuit breaker."""
-        async with self._lock:
+        async with self.lock:
             logger.warning("Circuit breaker manually forced OPEN.")
             self.state.state = CircuitBreakerStateEnum.OPEN
             self.state.last_failure_time = self._get_current_time()
 
     async def force_close(self):
         """Manually close the circuit breaker."""
-        async with self._lock:
+        async with self.lock:
             logger.info("Circuit breaker manually forced CLOSED.")
             self.state.state = CircuitBreakerStateEnum.CLOSED
             self.state.failure_count = 0

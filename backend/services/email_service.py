@@ -8,11 +8,11 @@ Includes retry logic and HTML email templates.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import mimetypes
 import os
 import smtplib
-import time
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -160,14 +160,17 @@ async def send_report_email(
             filename=attachment_filename,
         )
 
+    def _send_smtp_sync():
+        with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
+            server.login(smtp_email, smtp_password)
+            server.send_message(msg)
+
     # Send with retry logic
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             logger.info(f"Sending email to {to_email} (attempt {attempt}/{MAX_RETRIES})")
 
-            with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
-                server.login(smtp_email, smtp_password)
-                server.send_message(msg)
+            await asyncio.to_thread(_send_smtp_sync)
 
             logger.info(f"Email sent successfully to {to_email}")
             return True
@@ -179,7 +182,7 @@ async def send_report_email(
         except Exception as e:
             logger.warning(f"Email send attempt {attempt} failed: {e}")
             if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAY * attempt)
+                await asyncio.sleep(RETRY_DELAY * attempt)
 
     logger.error(f"Failed to send email to {to_email} after {MAX_RETRIES} attempts")
     return False

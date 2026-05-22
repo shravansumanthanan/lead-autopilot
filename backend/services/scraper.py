@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import logging
 import re
+import socket
+import ipaddress
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -85,11 +87,33 @@ def _normalize_url(base_url: str) -> str:
         url = "https://" + url
     return url
 
+def _is_safe_url(url: str) -> bool:
+    """Verify that a URL does not resolve to a private or loopback IP."""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        
+        ip_str = socket.gethostbyname(hostname)
+        ip = ipaddress.ip_address(ip_str)
+        
+        if ip.is_loopback or ip.is_private or ip.is_multicast or ip.is_reserved:
+            return False
+            
+        return True
+    except Exception:
+        return False
+
 
 # ── Core Scraping Functions ──────────────────────────────────────────────────
 
 async def _fetch_page(client: httpx.AsyncClient, url: str) -> str | None:
     """Fetch a single page, returning HTML or None on failure."""
+    if not _is_safe_url(url):
+        logger.warning(f"SSRF block: unsafe URL {url}")
+        return None
+        
     try:
         response = await client.get(url, follow_redirects=True, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
@@ -328,10 +352,9 @@ async def scrape_company_website(website_url: str) -> ScrapedData:
         "Accept-Language": "en-US,en;q=0.9",
     }
 
-    # verify=False: Many small-business sites have misconfigured or self-signed
-    # certificates. Failing on SSL would break the pipeline for legitimate targets.
-    # This is acceptable because we only read public HTML — no credentials are sent.
-    async with httpx.AsyncClient(headers=headers, verify=False) as client:
+    # verify=True ensures MITM protection. We no longer bypass SSL checks
+    # because doing so opens up global vulnerabilities in the underlying SSL context.
+    async with httpx.AsyncClient(headers=headers, verify=True) as client:
         # ── Step 1: Scrape homepage ──────────────────────────────────────
         html = await _fetch_page(client, url)
         if not html:

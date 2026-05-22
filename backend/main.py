@@ -6,6 +6,7 @@ Main application that orchestrates the entire lead processing pipeline.
 
 import logging
 import os
+import secrets
 import uuid
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -54,7 +55,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,12 +82,14 @@ async def health_check():
 @app.post("/api/leads", response_model=LeadSubmitResponse, status_code=202)
 async def submit_lead(lead: LeadSubmission, db: Session = Depends(get_db)):
     """Submit a new lead for processing."""
-    lead_id = str(uuid.uuid4())[:8]
+    lead_id = str(uuid.uuid4())
+    token = secrets.token_urlsafe(32)
 
     db_status = DBLeadStatus(
         lead_id=lead_id,
         company_name=lead.company,
         email=lead.email,
+        token=token,
         current_step=PipelineStep.SUBMITTED.value,
         steps_completed=[]
     )
@@ -100,16 +103,17 @@ async def submit_lead(lead: LeadSubmission, db: Session = Depends(get_db)):
 
     return LeadSubmitResponse(
         lead_id=lead_id,
+        token=token,
         message=f"Lead for {lead.company} submitted successfully. Processing has begun.",
         status=PipelineStep.SUBMITTED,
     )
 
 
 @app.get("/api/leads/{lead_id}/status", response_model=StatusResponse)
-async def get_lead_status(lead_id: str, db: Session = Depends(get_db)):
+async def get_lead_status(lead_id: str, token: str, db: Session = Depends(get_db)):
     """Poll for the processing status of a submitted lead."""
     status = db.query(DBLeadStatus).filter(DBLeadStatus.lead_id == lead_id).first()
-    if not status:
+    if not status or status.token != token:
         raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found")
 
     return StatusResponse(
@@ -122,19 +126,25 @@ async def get_lead_status(lead_id: str, db: Session = Depends(get_db)):
 
 
 @app.get("/api/leads/{lead_id}/pdf")
-async def download_pdf(lead_id: str, db: Session = Depends(get_db)):
+async def download_pdf(lead_id: str, token: str, db: Session = Depends(get_db)):
     """Download the generated PDF report for a lead."""
     status = db.query(DBLeadStatus).filter(DBLeadStatus.lead_id == lead_id).first()
-    if not status:
+    if not status or status.token != token:
         raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found")
 
-    if not status.pdf_path or not Path(status.pdf_path).exists():
+    if not status.pdf_path:
         raise HTTPException(status_code=404, detail="PDF not yet generated")
 
+    pdf_file = Path(status.pdf_path).resolve()
+    reports_dir = Path("reports").resolve()
+
+    if not str(pdf_file).startswith(str(reports_dir)) or not pdf_file.exists():
+        raise HTTPException(status_code=404, detail="PDF not found or access denied")
+
     return FileResponse(
-        status.pdf_path,
+        str(pdf_file),
         media_type="application/pdf",
-        filename=Path(status.pdf_path).name,
+        filename=pdf_file.name,
     )
 
 

@@ -40,14 +40,29 @@ _is_postgres = DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith(
 
 if _is_postgres:
     # PostgreSQL: use a proper connection pool.
-    # NullPool is safe for Celery workers (each task gets its own connection).
-    from sqlalchemy.pool import NullPool  # type: ignore
+    # We use QueuePool for performance, and dispose it on Celery worker init.
+    from sqlalchemy.pool import QueuePool
 
     engine = create_engine(
         DATABASE_URL,
-        poolclass=NullPool,
+        poolclass=QueuePool,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30,
         # echo=True,  # Uncomment to log all SQL for debugging
     )
+    
+    try:
+        from celery.signals import worker_process_init
+        @worker_process_init.connect
+        def dispose_sqlalchemy_engine(**kwargs):
+            """
+            Dispose of the SQLAlchemy engine in Celery worker processes
+            to prevent them from sharing connections across forks.
+            """
+            engine.dispose()
+    except ImportError:
+        pass
 elif _is_sqlite:
     # SQLite: disable same-thread check (FastAPI runs on multiple threads via
     # Starlette's threadpool; Celery workers also share the file).
@@ -82,6 +97,7 @@ class DBLeadStatus(Base):
     company_name = Column(String)
     email = Column(String)
 
+    token = Column(String, nullable=True)
     current_step = Column(String, default="submitted")
 
     # ── Native JSON columns ───────────────────────────────────────────────────

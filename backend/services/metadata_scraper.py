@@ -47,7 +47,7 @@ class MetadataOnlyScraper:
             title = soup.title.string.strip()
         elif soup.find("meta", property="og:title"):
             og_title = soup.find("meta", property="og:title")
-            if og_title and isinstance(og_title, dict) and "content" in og_title:
+            if og_title and og_title.get("content"):
                title = str(og_title.get("content", "")).strip()
 
         # 2. Extract Description

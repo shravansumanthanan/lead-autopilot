@@ -53,7 +53,7 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
         update_db_status(db, lead_id, PipelineStep.GENERATING_PDF, PipelineStep.ENRICHING)
         logger.info(f"[{lead_id}] Generating PDF report...")
 
-        pdf_path = generate_report_pdf(enriched)
+        pdf_path = await asyncio.to_thread(generate_report_pdf, enriched)
         update_db_status(db, lead_id, PipelineStep.GENERATING_PDF, pdf_path=pdf_path)
         logger.info(f"[{lead_id}] PDF generated: {pdf_path}")
 

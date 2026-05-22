@@ -1,6 +1,6 @@
 import os
 from string import Template
-from backend.core_models import EnrichedCompanyData
+from core_models import EnrichedCompanyData
 
 class MarkdownReportGenerator:
     """Generates markdown reports from EnrichedCompanyData."""

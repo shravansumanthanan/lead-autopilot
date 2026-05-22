@@ -73,12 +73,10 @@ class QualityScoreCalculator:
             return 0.0
             
         score = 0.0
-        if web_search_data.get("competitors"):
-            score += 0.4
+        if web_search_data.get("organic_results"):
+            score += 0.5
         if web_search_data.get("news"):
-            score += 0.3
-        if web_search_data.get("industry_trends"):
-            score += 0.3
+            score += 0.5
             
         return score
 

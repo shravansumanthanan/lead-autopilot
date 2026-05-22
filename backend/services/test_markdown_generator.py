@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from backend.core_models import EnrichedCompanyData, LeadSubmission, AIAnalysis, ActionItem, ScrapedData
+from core_models import EnrichedCompanyData, LeadSubmission, AIAnalysis, ActionItem, ScrapedData
 from backend.services.markdown_generator import MarkdownReportGenerator
 
 def test_generate_markdown_report():

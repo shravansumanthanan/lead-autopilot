@@ -113,7 +113,8 @@ export default function Home() {
 
   const handleDownload = () => {
     if (leadId) {
-      window.open(`http://localhost:8000/api/leads/${leadId}/pdf`, "_blank");
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      window.open(`${API_BASE}/api/leads/${leadId}/pdf`, "_blank");
     }
   };
 
