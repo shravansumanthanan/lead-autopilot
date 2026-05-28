@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ── Paths ────────────────────────────────────────────────────────────────────
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
+OUTPUT_DIR = Path(__file__).parent.parent.parent / "reports"
 
 
 def _ensure_output_dir() -> Path:

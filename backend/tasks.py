@@ -3,8 +3,6 @@ import logging
 from datetime import datetime, timezone
 from celery_app import celery_app
 
-from sqlalchemy.orm.attributes import flag_modified
-
 from core_models import LeadSubmission, EnrichedCompanyData, PipelineStep
 from database import SessionLocal, DBLeadStatus
 from workflows.report_pipeline import run_enrichment_pipeline
@@ -23,15 +21,7 @@ def update_db_status(db, lead_id: str, current_step: PipelineStep, completed_ste
     if status:
         status.current_step = current_step.value
         if completed_step:
-            # Reassign to a new list so SQLAlchemy's JSON column change tracker
-            # detects the mutation. In-place .append() on a JSON column is
-            # not automatically tracked without flag_modified.
-            steps = list(status.steps_completed or [])
-            steps.append(completed_step.value)
-            status.steps_completed = steps
-            # Belt-and-suspenders: explicitly mark the JSON column as dirty
-            # so SQLAlchemy's unit-of-work always flushes the new value.
-            flag_modified(status, "steps_completed")
+            status.steps_completed.append(completed_step.value)
         for k, v in kwargs.items():
             setattr(status, k, v)
         db.commit()
@@ -40,24 +30,28 @@ def update_db_status(db, lead_id: str, current_step: PipelineStep, completed_ste
 async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
     lead = LeadSubmission(**lead_dict)
     db = SessionLocal()
+    
+    async def _update(*args, **kwargs):
+        await asyncio.to_thread(update_db_status, *args, **kwargs)
+
     try:
-        update_db_status(db, lead_id, PipelineStep.VALIDATING, PipelineStep.SUBMITTED)
+        await _update(db, lead_id, PipelineStep.VALIDATING, PipelineStep.SUBMITTED)
         logger.info(f"[{lead_id}] Pipeline started for {lead.company}")
 
-        update_db_status(db, lead_id, PipelineStep.ENRICHING, PipelineStep.VALIDATING)
+        await _update(db, lead_id, PipelineStep.ENRICHING, PipelineStep.VALIDATING)
         logger.info(f"[{lead_id}] Starting enrichment...")
 
         enriched: EnrichedCompanyData = await run_enrichment_pipeline(lead)
         logger.info(f"[{lead_id}] Enrichment complete (quality: {enriched.data_quality_score:.2f}, confidence: {enriched.confidence_level})")
 
-        update_db_status(db, lead_id, PipelineStep.GENERATING_PDF, PipelineStep.ENRICHING)
+        await _update(db, lead_id, PipelineStep.GENERATING_PDF, PipelineStep.ENRICHING)
         logger.info(f"[{lead_id}] Generating PDF report...")
 
         pdf_path = await asyncio.to_thread(generate_report_pdf, enriched)
-        update_db_status(db, lead_id, PipelineStep.GENERATING_PDF, pdf_path=pdf_path)
+        await _update(db, lead_id, PipelineStep.GENERATING_PDF, pdf_path=pdf_path)
         logger.info(f"[{lead_id}] PDF generated: {pdf_path}")
 
-        update_db_status(db, lead_id, PipelineStep.SENDING_EMAIL, PipelineStep.GENERATING_PDF)
+        await _update(db, lead_id, PipelineStep.SENDING_EMAIL, PipelineStep.GENERATING_PDF)
         logger.info(f"[{lead_id}] Sending email to {lead.email}...")
 
         email_sent = await send_report_email(
@@ -67,9 +61,9 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
             industry=lead.industry,
             pdf_path=pdf_path,
         )
-        update_db_status(db, lead_id, PipelineStep.SENDING_EMAIL, email_sent=email_sent)
+        await _update(db, lead_id, PipelineStep.SENDING_EMAIL, email_sent=email_sent)
 
-        update_db_status(db, lead_id, PipelineStep.LOGGING, PipelineStep.SENDING_EMAIL)
+        await _update(db, lead_id, PipelineStep.LOGGING, PipelineStep.SENDING_EMAIL)
 
         report_status = "complete" if email_sent else "pdf_only"
 
@@ -105,7 +99,7 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
         except Exception as e:
             logger.warning(f"[{lead_id}] CRM webhook failed: {e}")
 
-        update_db_status(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.now(timezone.utc))
+        await _update(db, lead_id, PipelineStep.COMPLETE, PipelineStep.LOGGING, completed_at=datetime.now(timezone.utc))
         
         if enriched.confidence_level != "High":
             logger.info(f"[{lead_id}] Pipeline complete for {lead.company} (PARTIAL_SUCCESS: {enriched.confidence_level} Confidence)")
@@ -118,7 +112,7 @@ async def _async_process_lead_pipeline(lead_id: str, lead_dict: dict):
             lead_id=lead_id,
             component="pipeline",
         )
-        update_db_status(
+        await _update(
             db, lead_id, PipelineStep.ERROR,
             error_message=error_event.user_facing_message,
         )

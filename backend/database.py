@@ -30,6 +30,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # PostgreSQL (as the native JSONB-compatible JSON type).  It removes the need
 # for manual json.loads / json.dumps property wrappers entirely.
 from sqlalchemy import JSON
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 
 # ── Engine Configuration ──────────────────────────────────────────────────────
 
@@ -103,11 +104,11 @@ class DBLeadStatus(Base):
     # ── Native JSON columns ───────────────────────────────────────────────────
     # SQLAlchemy automatically serialises Python list/dict → database text/JSON
     # and deserialises back on read.  No property wrappers required.
-    steps_completed = Column(JSON, default=list, nullable=False)
-    pipeline_step_statuses = Column(JSON, default=dict, nullable=False)
-    errors = Column(JSON, default=list, nullable=False)
-    warnings = Column(JSON, default=list, nullable=False)
-    quality_score = Column(JSON, default=dict, nullable=False)
+    steps_completed = Column(MutableList.as_mutable(JSON), default=list, nullable=False)
+    pipeline_step_statuses = Column(MutableDict.as_mutable(JSON), default=dict, nullable=False)
+    errors = Column(MutableList.as_mutable(JSON), default=list, nullable=False)
+    warnings = Column(MutableList.as_mutable(JSON), default=list, nullable=False)
+    quality_score = Column(MutableDict.as_mutable(JSON), default=dict, nullable=False)
 
     # ── Scalar fields ─────────────────────────────────────────────────────────
     error_message = Column(String, nullable=True)

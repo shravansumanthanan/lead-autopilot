@@ -18,6 +18,7 @@ import logging
 import re
 import socket
 import ipaddress
+import contextlib
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -87,37 +88,63 @@ def _normalize_url(base_url: str) -> str:
         url = "https://" + url
     return url
 
-def _is_safe_url(url: str) -> bool:
+def _is_safe_url(url: str) -> tuple[bool, str | None, str | None]:
     """Verify that a URL does not resolve to a private or loopback IP."""
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname
         if not hostname:
-            return False
+            return False, None, None
         
         ip_str = socket.gethostbyname(hostname)
         ip = ipaddress.ip_address(ip_str)
         
         if ip.is_loopback or ip.is_private or ip.is_multicast or ip.is_reserved:
-            return False
+            return False, hostname, ip_str
             
-        return True
+        return True, hostname, ip_str
     except Exception:
-        return False
+        return False, None, None
+
+@contextlib.contextmanager
+def patch_getaddrinfo_for_ssrf(hostname: str | None, safe_ip: str | None):
+    """
+    Temporarily patch socket.getaddrinfo to return the pre-validated safe IP
+    for the target hostname, preventing TOCTOU DNS rebinding attacks.
+    """
+    if not hostname or not safe_ip:
+        yield
+        return
+        
+    orig_getaddrinfo = socket.getaddrinfo
+
+    def _patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        if host == hostname:
+            # Return the safe IP instead of performing a new DNS resolution
+            return orig_getaddrinfo(safe_ip, port, family, type, proto, flags)
+        return orig_getaddrinfo(host, port, family, type, proto, flags)
+
+    socket.getaddrinfo = _patched_getaddrinfo
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = orig_getaddrinfo
 
 
 # ── Core Scraping Functions ──────────────────────────────────────────────────
 
 async def _fetch_page(client: httpx.AsyncClient, url: str) -> str | None:
     """Fetch a single page, returning HTML or None on failure."""
-    if not _is_safe_url(url):
+    is_safe, hostname, safe_ip = _is_safe_url(url)
+    if not is_safe:
         logger.warning(f"SSRF block: unsafe URL {url}")
         return None
         
     try:
-        response = await client.get(url, follow_redirects=True, timeout=REQUEST_TIMEOUT)
-        if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
-            return response.text
+        with patch_getaddrinfo_for_ssrf(hostname, safe_ip):
+            response = await client.get(url, follow_redirects=True, timeout=REQUEST_TIMEOUT)
+            if response.status_code == 200 and "text/html" in response.headers.get("content-type", ""):
+                return response.text
     except (httpx.HTTPError, httpx.TimeoutException, Exception) as e:
         logger.warning(f"Failed to fetch {url}: {e}")
     return None
